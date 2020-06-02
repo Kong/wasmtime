@@ -2607,6 +2607,7 @@ version = "0.16.0"
 dependencies = [
  "proptest",
  "thiserror",
+ "tracing",
  "wiggle-macro",
  "wiggle-test",
  "witx",
