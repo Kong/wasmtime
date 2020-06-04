@@ -9,6 +9,7 @@ use log::{debug, error, trace};
 use std::convert::TryInto;
 use std::io::{self, SeekFrom};
 use wiggle::{GuestPtr, GuestSlice};
+use std::net::{ToSocketAddrs, SocketAddr};
 
 impl<'a> WasiSnapshotPreview1 for WasiCtx {
     fn args_get<'b>(
@@ -806,6 +807,105 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
             error!("getrandom failure: {:?}", err);
             Errno::Io
         })
+    }
+
+    fn addr_resolve(
+        &self,
+        host: &GuestPtr<'_, str>,
+        buf: &GuestPtr<u8>,
+        _buf_len: types::Size
+    ) -> Result<types::Size> {
+        let host = host.as_str()?;
+        let mut bufused = 0;
+        let result = (&*host).to_socket_addrs()?;
+        let ptr = buf.cast::<types::Addr>();
+        let isize = std::mem::size_of::<types::Addr>();
+        for addr in result {
+            match addr {
+                SocketAddr::V6(ref addr) => {
+                    let segments = addr.ip().segments();
+                    ptr.write(types::Addr::Ip6(
+                        types::AddrIp6Port {
+                            addr: types::AddrIp6 {
+                                n0: segments[0],
+                                n1: segments[1],
+                                n2: segments[2],
+                                n3: segments[3],
+                                h0: segments[4],
+                                h1: segments[5],
+                                h2: segments[6],
+                                h3: segments[7]
+                            },
+                            port: addr.port()
+                        }
+                    ))?;
+                }
+                SocketAddr::V4(ref addr)=> {
+                    let segments = addr.ip().octets();
+                    ptr.write(types::Addr::Ip4(
+                        types::AddrIp4Port {
+                            addr: types::AddrIp4 {
+                                n0: segments[0],
+                                n1: segments[1],
+                                h0: segments[2],
+                                h1: segments[3],
+                            },
+                            port: addr.port()
+                        }
+                    ))?;
+                }
+            }
+            bufused += isize;
+            ptr.add(isize.try_into().unwrap())?;
+        }
+        Ok(bufused.try_into().unwrap())
+        /*
+        let mut bufused = 0;
+        let mut buf = buf.clone();
+        for addr in host.to_sock_addrs() {
+
+        }
+        let required_rights = HandleRights::from_base(types::Rights::FD_READDIR);
+        let entry = self.get_entry(fd)?;
+
+        let mut buf = buf.clone();
+        for pair in entry.as_handle(&required_rights)?.readdir(cookie)? {
+            let (dirent, name) = pair?;
+            let dirent_raw = dirent.as_bytes()?;
+            let dirent_len: types::Size = dirent_raw.len().try_into()?;
+            let name_raw = name.as_bytes();
+            let name_len = name_raw.len().try_into()?;
+            let offset = dirent_len.checked_add(name_len).ok_or(Errno::Overflow)?;
+            if (buf_len - bufused) < offset {
+                break;
+            } else {
+                buf.as_array(dirent_len).copy_from_slice(&dirent_raw)?;
+                buf = buf.add(dirent_len)?;
+                buf.as_array(name_len).copy_from_slice(name_raw)?;
+                buf = buf.add(name_len)?;
+                bufused += offset;
+            }
+        }
+
+        Ok(bufused)
+         */
+        //unimplemented!("addr_resolve");
+    }
+
+    fn sock_open(
+        &self,
+        _addrtype: types::AddrType,
+        _socktype: types::SockType
+    ) -> Result<types::Fd> {
+        unimplemented!("sock_open")
+    }
+
+    fn sock_connect(
+        &self,
+        _fd: types::Fd,
+        _addr: &GuestPtr<types::Addr>
+    ) -> Result<()> {
+        unimplemented!("sock_connect")
     }
 
     fn sock_recv(
