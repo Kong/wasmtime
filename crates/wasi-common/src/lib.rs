@@ -33,6 +33,7 @@ mod sandboxed_tty_writer;
 pub mod snapshots;
 mod sys;
 pub mod virtfs;
+mod addr;
 pub mod wasi;
 
 pub use ctx::{WasiCtx, WasiCtxBuilder, WasiCtxBuilderError};

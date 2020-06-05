@@ -680,6 +680,12 @@ impl<'a> Drop for GuestStr<'a> {
     }
 }
 
+impl<'a> std::fmt::Display for GuestStr<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.ptr)
+    }
+}
+
 mod private {
     pub trait Sealed {}
     impl<T> Sealed for T {}
