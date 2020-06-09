@@ -4,6 +4,7 @@ use std::fs::File;
 use std::path::Path;
 use wasi_common::{OsOther, VirtualDirEntry};
 use wasmtime::{Linker, Module, Store};
+use std::net::{SocketAddr, IpAddr, Ipv4Addr};
 
 #[derive(Clone, Copy, Debug)]
 pub enum PreopenType {
@@ -41,6 +42,9 @@ pub fn instantiate(
             }
         }
     }
+
+    // Add localhost address pools
+    builder.socket_addr(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080) );
 
     // The nonstandard thing we do with `WasiCtxBuilder` is to ensure that
     // `stdin` is always an unreadable pipe. This is expected in the test suite

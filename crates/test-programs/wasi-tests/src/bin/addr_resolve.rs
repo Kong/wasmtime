@@ -4,7 +4,7 @@ use std::{cmp::min, mem, slice, str};
 const BUF_LEN: usize = 256;
 
 // Smaller than a single type::Addr. Size of type::Addr is 24.
-const SMALL_BUF_LEN: usize = 20;
+const SMALL_BUF_LEN: usize = 19;
 
 struct Addrs<'a> {
     buf: &'a [u8],
@@ -36,10 +36,10 @@ impl<'a> Iterator for Addrs<'a> {
     }
 }
 
-unsafe fn exec_addr_resolve(host: &str) -> Vec<wasi::Addr> {
+unsafe fn exec_addr_resolve(host: &str, port: u16) -> Vec<wasi::Addr> {
     let mut buf: [u8; BUF_LEN] = [0; BUF_LEN];
     let bufused =
-        wasi::addr_resolve(host, 0, buf.as_mut_ptr(), BUF_LEN).expect("failed addr_resolve");
+        wasi::addr_resolve(host, port, buf.as_mut_ptr(), BUF_LEN).expect("failed addr_resolve");
 
     let sl = slice::from_raw_parts(buf.as_ptr(), min(BUF_LEN, bufused));
     let addresses: Vec<_> = Addrs::from_slice(sl).collect();
@@ -47,9 +47,9 @@ unsafe fn exec_addr_resolve(host: &str) -> Vec<wasi::Addr> {
 }
 
 unsafe fn test_addr_resolve() {
-    let addresses = exec_addr_resolve("localhost");
+    let addresses = exec_addr_resolve("localhost", 8080);
     assert_ge!(addresses.len(), 1, "localhost should at least resolve to one IP address");
-    for addr in addresses {
+    for ref addr in addresses {
         match addr.tag {
             wasi::ADDR_TYPE_IP4 => {
                 assert!(
@@ -58,6 +58,7 @@ unsafe fn test_addr_resolve() {
                         addr.u.ip4.addr.h0 == 0 &&
                         addr.u.ip4.addr.h1 == 1
                     , "invalid ip address");
+                assert!(addr.u.ip4.port == 8080, "invalid port number");
             }
             wasi::ADDR_TYPE_IP6 => {
                 assert!(
@@ -70,6 +71,7 @@ unsafe fn test_addr_resolve() {
                         addr.u.ip6.addr.h2 == 0 &&
                         addr.u.ip6.addr.h3 == 1
                     , "invalid ip address");
+                assert!(addr.u.ip6.port == 8080, "invalid port number");
             }
             _ => assert!(true, "invalid address type")
         }
@@ -80,7 +82,7 @@ unsafe fn test_addr_resolve_no_overflow() {
     let mut buf: [u8; SMALL_BUF_LEN] = [0; SMALL_BUF_LEN];
     let bufused =
         wasi::addr_resolve("localhost", 0, buf.as_mut_ptr(), SMALL_BUF_LEN).expect("failed addr_resolve");
-    assert_eq!(bufused, 0, "most likely we overflow the buffer");
+    assert_eq!(bufused, 0, "most likely we overflowed the buffer");
 }
 
 fn main() {

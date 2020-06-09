@@ -27,6 +27,7 @@ filetime = "0.2.7"
 lazy_static = "1.4.0"
 wig = { path = "wig", version = "0.19.0" }
 wiggle = { path = "../wiggle", default-features = false, version = "0.19.0" }
+ipnet = "2.3.0"
 
 [target.'cfg(unix)'.dependencies]
 yanix = { path = "yanix", version = "0.19.0" }

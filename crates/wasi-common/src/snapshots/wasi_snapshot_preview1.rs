@@ -9,7 +9,6 @@ use log::{debug, error, trace};
 use std::convert::TryInto;
 use std::io::{self, SeekFrom};
 use wiggle::{GuestPtr, GuestType, GuestSlice};
-use crate::addr::ToWasiSocketAddrs;
 
 impl<'a> WasiSnapshotPreview1 for WasiCtx {
     fn args_get<'b>(
@@ -814,20 +813,20 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         host: &GuestPtr<'_, str>,
         port: types::IpPort,
         buf: &GuestPtr<u8>,
-        buf_len: types::Size,
+        buf_len: types::Size
     ) -> Result<types::Size> {
         let mut buf = buf.cast::<types::Addr>().clone();
         let host = host.as_str()?;
         let size = <types::Addr as GuestType>::guest_size().try_into()?;
         let mut bufused = 0;
-        let result = (host.as_ref(), port).to_wasi_socket_addrs()?;
+        let result = self.addr_resolve(host.as_ref(), port )?;
         for addr in result {
             if (buf_len - bufused) < size {
                 break;
             }
 
             buf.write(addr)?;
-            buf = buf.add(size)?;
+            buf = buf.add(1)?;
             bufused += size;
         }
         Ok(bufused.try_into().unwrap())
@@ -835,10 +834,11 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
 
     fn sock_open(
         &self,
-        _addrtype: types::AddrType,
+        _addr: types::Fd,
         _socktype: types::SockType,
     ) -> Result<types::Fd> {
         unimplemented!("sock_open")
+        //std::net::libc::socket_open
     }
 
     fn sock_connect(

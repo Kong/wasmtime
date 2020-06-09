@@ -1,19 +1,40 @@
+use crate::handle::HandleRights;
 use crate::wasi::types;
-use std::io;
+use crate::wasi::Result;
+use std::cell::Cell;
+use std::net::{SocketAddr, ToSocketAddrs};
+use std::ops::Range;
 use std::vec;
-use std::net::{ToSocketAddrs, SocketAddr};
+use ipnet::IpNet;
+use std::rc::Rc;
 
-pub trait ToWasiSocketAddrs<'a> {
-    type Iter: Iterator<Item=types::Addr<'a>>;
-
-    fn to_wasi_socket_addrs(&self) -> io::Result<Self::Iter>;
+pub(crate) struct AddressPoolTable {
+    pools: Vec<Box<dyn AddressPool>>
 }
 
-impl<'a> ToWasiSocketAddrs<'a> for (&str, u16) {
-    type Iter = vec::IntoIter<types::Addr<'a>>;
-    fn to_wasi_socket_addrs(&self) -> io::Result<vec::IntoIter<types::Addr<'a>>> {
-        let addresses = self.to_socket_addrs()?;
-        let v: Vec<_> = addresses.into_iter().map(|addr| {
+impl AddressPoolTable {
+    pub(crate) fn new() -> AddressPoolTable {
+        AddressPoolTable {
+            pools: vec![]
+        }
+    }
+
+    pub(crate) fn insert(&mut self, pool: Box<dyn AddressPool>) -> &mut Self {
+        self.pools.push(pool);
+        self
+    }
+
+    pub(crate) fn resolve(&self, host: &str, port: u16) -> Result<Vec<types::Addr>> {
+        let addresses = (host, port).to_socket_addrs()?;
+        let filtered = addresses.into_iter().filter(|addr| {
+            for pool in &self.pools {
+                if pool.contains(addr) {
+                    return true
+                }
+            }
+            false
+        });
+        let v = filtered.map(|addr| {
             match addr {
                 SocketAddr::V6(ref addr) => {
                     let segments = addr.ip().segments();
@@ -48,6 +69,51 @@ impl<'a> ToWasiSocketAddrs<'a> for (&str, u16) {
                 }
             }
         }).collect();
-        Ok(v.into_iter())
+        Ok(v)
+    }
+}
+
+pub(crate) trait AddressPool {
+    fn get_rights(&self) -> HandleRights {
+        HandleRights::empty()
+    }
+    fn contains(&self, _addr: &SocketAddr) -> bool { false }
+}
+
+pub(crate) struct FixedAddressPool {
+    rights: Cell<HandleRights>,
+    addrs: Vec<SocketAddr>
+}
+
+impl FixedAddressPool {
+    pub(crate) fn new(addr: SocketAddr) -> FixedAddressPool {
+        FixedAddressPool {
+            rights: Cell::new(HandleRights::from_base(types::Rights::SOCK_CONNECT ) ),
+            addrs: vec![addr]
+        }
+    }
+}
+
+struct RangedAddressPool {
+    rights: Cell<HandleRights>,
+    cidr: IpNet,
+    ports: Range<u16>
+}
+
+impl AddressPool for FixedAddressPool {
+    fn get_rights(&self) -> HandleRights {
+        self.rights.get()
+    }
+    fn contains(&self, addr: &SocketAddr) -> bool {
+        self.addrs.contains(addr)
+    }
+}
+
+impl AddressPool for RangedAddressPool {
+    fn get_rights(&self) -> HandleRights {
+        self.rights.get()
+    }
+    fn contains(&self, addr: &SocketAddr) -> bool {
+        self.cidr.contains(&addr.ip()) && self.ports.contains(&addr.port())
     }
 }
