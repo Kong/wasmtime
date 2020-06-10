@@ -1,6 +1,20 @@
-use crate::from_success_code;
+use crate::{from_success_code, from_result};
 use std::io::Result;
 use std::os::unix::prelude::*;
+
+#[repr(i32)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum AddressFamily {
+    InetAddr = libc::PF_INET,
+    Inet6Addr = libc::PF_INET6
+}
+
+#[repr(i32)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum SockProtocol {
+    Tcp = libc::IPPROTO_TCP,
+    Udp = libc::IPPROTO_UDP
+}
 
 #[derive(Debug, Clone, Copy)]
 #[repr(i32)]
@@ -10,6 +24,14 @@ pub enum SockType {
     SeqPacket = libc::SOCK_SEQPACKET,
     Raw = libc::SOCK_RAW,
     Rdm = libc::SOCK_RDM,
+}
+
+pub unsafe fn socket(af: AddressFamily, t: SockType, p: Option<SockProtocol>) -> Result<RawFd> {
+    let protocol: libc::c_int = match p {
+        None => 0,
+        Some(p) => p as libc::c_int,
+    };
+    from_result(libc::socket(af as libc::c_int, t as libc::c_int, protocol))
 }
 
 pub unsafe fn get_socket_type(fd: RawFd) -> Result<SockType> {

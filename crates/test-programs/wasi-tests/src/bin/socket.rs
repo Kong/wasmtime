@@ -14,7 +14,7 @@ unsafe fn test_socket_server() {
         },
     };
 
-    let fd = wasi::sock_open(wasi::SOCK_TYPE_SOCKET_STREAM).unwrap();
+    let fd = wasi::sock_open(wasi::ADDRESS_FAMILY_INET4, wasi::SOCK_TYPE_SOCKET_STREAM).unwrap();
     wasi::sock_bind(fd, &mut addr as *mut wasi::Addr);
     wasi::sock_listen(fd, 10);
 
@@ -50,7 +50,7 @@ unsafe fn test_socket_client() {
         },
     };
 
-    let fd = wasi::sock_open(wasi::SOCK_TYPE_SOCKET_STREAM).unwrap(); // will bind automatically if listen
+    let fd = wasi::sock_open(wasi::ADDRESS_FAMILY_INET4, wasi::SOCK_TYPE_SOCKET_STREAM).unwrap();
     wasi::sock_connect(fd, &mut addr as *mut wasi::Addr);
 
     let contents = &mut [0u8; 64];

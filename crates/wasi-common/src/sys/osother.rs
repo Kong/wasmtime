@@ -37,7 +37,7 @@ pub struct OsOther {
 }
 
 impl OsOther {
-    pub(super) fn new(file_type: Filetype, rights: HandleRights, handle: RawOsHandle) -> Self {
+    pub(crate) fn new(file_type: Filetype, rights: HandleRights, handle: RawOsHandle) -> Self {
         let rights = Cell::new(rights);
         Self {
             file_type,

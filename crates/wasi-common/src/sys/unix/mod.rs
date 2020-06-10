@@ -4,6 +4,7 @@ pub(crate) mod osdir;
 pub(crate) mod osfile;
 pub(crate) mod oshandle;
 pub(crate) mod osother;
+pub(crate) mod ossocket;
 pub(crate) mod path;
 pub(crate) mod poll;
 pub(crate) mod stdio;

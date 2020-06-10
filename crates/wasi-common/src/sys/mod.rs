@@ -3,6 +3,7 @@ pub(crate) mod fd;
 pub(crate) mod osdir;
 pub(crate) mod osfile;
 pub(crate) mod osother;
+pub(crate) mod ossocket;
 pub(crate) mod stdio;
 
 use cfg_if::cfg_if;

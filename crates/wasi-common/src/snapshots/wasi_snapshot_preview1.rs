@@ -1,6 +1,7 @@
 use crate::entry::{Entry, EntryHandle};
 use crate::handle::HandleRights;
 use crate::sys::clock;
+use crate::sys::ossocket::OsSocket;
 use crate::wasi::wasi_snapshot_preview1::WasiSnapshotPreview1;
 use crate::wasi::{types, AsBytes, Errno, Result};
 use crate::WasiCtx;
@@ -834,10 +835,12 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
 
     fn sock_open(
         &self,
-        _socktype: types::SockType,
+        address_family: types::AddressFamily,
+        socket_type: types::SockType,
     ) -> Result<types::Fd> {
-        unimplemented!("sock_open")
-        //std::net::libc::socket_open
+        let handle = OsSocket::new(address_family, socket_type)?;
+        let entry = Entry::new(EntryHandle::new(handle));
+        self.insert_entry(entry)
     }
 
     fn sock_connect(
@@ -850,23 +853,23 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
 
     fn sock_bind(
         &self,
-        fd: types::Fd,
-        addr: &GuestPtr<types::Addr>
+        _fd: types::Fd,
+        _addr: &GuestPtr<types::Addr>
     ) -> Result<()> {
         unimplemented!("sock_bind")
     }
 
     fn sock_listen(
         &self,
-        fd: types::Fd,
-        backlog: types::Size
+        _fd: types::Fd,
+        _backlog: types::Size
     ) -> Result<()> {
         unimplemented!("sock_listen")
     }
 
     fn sock_accept(
         &self,
-        fd: types::Fd
+        _fd: types::Fd
     ) -> Result<types::Fd> {
         unimplemented!("sock_accept")
     }
