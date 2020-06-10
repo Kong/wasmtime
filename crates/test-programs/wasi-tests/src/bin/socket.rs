@@ -50,8 +50,10 @@ unsafe fn test_socket_client() {
         },
     };
 
-    let fd = wasi::sock_open(wasi::ADDRESS_FAMILY_INET4, wasi::SOCK_TYPE_SOCKET_STREAM).unwrap();
-    wasi::sock_connect(fd, &mut addr as *mut wasi::Addr);
+    let fd = wasi::sock_open(wasi::ADDRESS_FAMILY_INET4, wasi::SOCK_TYPE_SOCKET_STREAM)
+        .expect("cannot open socket");
+    wasi::sock_connect(fd, &mut addr as *mut wasi::Addr)
+        .expect("cannot connect to localhost");
 
     let contents = &mut [0u8; 64];
     let iovec = wasi::Iovec {

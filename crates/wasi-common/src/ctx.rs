@@ -7,7 +7,7 @@ use crate::sys::stdio::{Stderr, StderrExt, Stdin, StdinExt, Stdout, StdoutExt};
 use crate::virtfs::{VirtualDir, VirtualDirEntry};
 use crate::wasi::types;
 use crate::wasi::{Errno, Result};
-use crate::addr::{AddressPoolTable, FixedAddressPool};
+use crate::addr::{AddressPoolTable, FixedAddressPool, AddressPool};
 use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -523,5 +523,13 @@ impl WasiCtx {
     /// address pool table.
     pub(crate) fn addr_resolve(&self, host: &str, port: u16) -> Result<Vec<types::Addr>> {
         self.address_pools.borrow().resolve(host, port)
+    }
+
+    /// Retrieve the `AddressPool` that contains this `SocketAddr`
+    pub(crate) fn get_addr_pool(&self, addr: &types::Addr) -> Result<Rc<Box<dyn AddressPool>>> {
+        match self.address_pools.borrow().get_pool(addr) {
+            Some(pool) => Ok(pool),
+            None => Err(Errno::Badf)
+        }
     }
 }

@@ -214,4 +214,9 @@ pub trait Handle {
     fn unlink_file(&self, _path: &str) -> Result<()> {
         Err(Errno::Acces)
     }
+    fn sock_connect(&self, _addr: &types::Addr) -> Result<()> { Err(Errno::Acces) }
+    fn sock_bind(&self, _addr: &types::Addr) -> Result<()> { Err(Errno::Acces) }
+    fn sock_listen(&self, _backlog: u32) -> Result<()> { Err(Errno::Acces) }
+    fn sock_accept(&self) -> Result<Box<dyn Handle>> { Err(Errno::Acces) }
+    fn sock_shutdown(&self, _how: types::Sdflags) -> Result<()> { Err(Errno::Acces) }
 }

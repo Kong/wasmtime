@@ -845,35 +845,63 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
 
     fn sock_connect(
         &self,
-        _fd: types::Fd,
-        _addr: &GuestPtr<types::Addr>,
+        fd: types::Fd,
+        addr: &GuestPtr<types::Addr>,
     ) -> Result<()> {
-        unimplemented!("sock_connect")
+        let addr = addr.read()?;
+        let required_rights = HandleRights::from_base(types::Rights::SOCK_CONNECT );
+        let pool = self.get_addr_pool(&addr)?;
+        let pool_rights = pool.get_rights();
+        let entry = self.get_entry(fd)?;
+
+        // transfer pool rights into the socket
+        entry.set_rights(pool_rights);
+
+        let handle = entry.as_handle(&required_rights)?;
+        handle.sock_connect(&addr)
     }
 
     fn sock_bind(
         &self,
-        _fd: types::Fd,
-        _addr: &GuestPtr<types::Addr>
+        fd: types::Fd,
+        addr: &GuestPtr<types::Addr>
     ) -> Result<()> {
-        unimplemented!("sock_bind")
+        let addr = addr.read()?;
+        let required_rights = HandleRights::from_base(types::Rights::SOCK_BIND );
+        let pool = self.get_addr_pool(&addr)?;
+        let pool_rights = pool.get_rights();
+        let entry = self.get_entry(fd)?;
+
+        // transfer pool rights into the socket
+        entry.set_rights(pool_rights);
+
+        let handle = entry.as_handle(&required_rights)?;
+        handle.sock_bind(&addr)
     }
 
     fn sock_listen(
         &self,
-        _fd: types::Fd,
-        _backlog: types::Size
+        fd: types::Fd,
+        backlog: types::Size
     ) -> Result<()> {
-        unimplemented!("sock_listen")
+        let required_rights = HandleRights::from_base(types::Rights::SOCK_LISTEN );
+        let entry = self.get_entry(fd)?;
+        let handle = entry.as_handle(&required_rights)?;
+        handle.sock_listen(backlog)
     }
 
     fn sock_accept(
         &self,
-        _fd: types::Fd
+        fd: types::Fd
     ) -> Result<types::Fd> {
-        unimplemented!("sock_accept")
+        let required_rights = HandleRights::from_base(types::Rights::SOCK_ACCEPT );
+        let entry = self.get_entry(fd)?;
+        let handle = entry.as_handle(&required_rights)?;
+        let child = handle.sock_accept()?;
+        let entry = Entry::new(EntryHandle::from(child));
+        let child_fd = self.insert_entry(entry)?;
+        Ok(child_fd)
     }
-
 
     fn sock_recv(
         &self,
@@ -893,7 +921,12 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         unimplemented!("sock_send")
     }
 
-    fn sock_shutdown(&self, _fd: types::Fd, _how: types::Sdflags) -> Result<()> {
-        unimplemented!("sock_shutdown")
+    fn sock_shutdown(&self, fd: types::Fd, how: types::Sdflags) -> Result<()> {
+        let entry = self.get_entry(fd)?;
+        let rights = HandleRights::empty();
+        let handle = entry.as_handle(&rights)?;
+        handle.sock_shutdown(how)?;
+        self.remove_entry(fd)?;
+        Ok(())
     }
 }
