@@ -6,7 +6,6 @@ use std::net::{SocketAddr, ToSocketAddrs};
 use std::ops::Range;
 use std::vec;
 use ipnet::IpNet;
-use std::rc::Rc;
 
 pub(crate) struct AddressPoolTable {
     pools: Vec<Box<dyn AddressPool>>

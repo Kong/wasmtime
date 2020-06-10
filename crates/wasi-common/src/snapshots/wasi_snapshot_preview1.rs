@@ -834,7 +834,6 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
 
     fn sock_open(
         &self,
-        _addr: types::Fd,
         _socktype: types::SockType,
     ) -> Result<types::Fd> {
         unimplemented!("sock_open")
@@ -849,12 +848,36 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         unimplemented!("sock_connect")
     }
 
+    fn sock_bind(
+        &self,
+        fd: types::Fd,
+        addr: &GuestPtr<types::Addr>
+    ) -> Result<()> {
+        unimplemented!("sock_bind")
+    }
+
+    fn sock_listen(
+        &self,
+        fd: types::Fd,
+        backlog: types::Size
+    ) -> Result<()> {
+        unimplemented!("sock_listen")
+    }
+
+    fn sock_accept(
+        &self,
+        fd: types::Fd
+    ) -> Result<types::Fd> {
+        unimplemented!("sock_accept")
+    }
+
+
     fn sock_recv(
         &self,
         _fd: types::Fd,
         _ri_data: &types::IovecArray<'_>,
         _ri_flags: types::Riflags,
-    ) -> Result<(types::Size, types::Roflags)> {
+    ) -> Result<types::Size> {
         unimplemented!("sock_recv")
     }
 
