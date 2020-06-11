@@ -45,7 +45,7 @@ unsafe fn test_socket_client() {
                     h0: 0,
                     h1: 1,
                 },
-                port: 5000,
+                port: 8080,
             }
         },
     };

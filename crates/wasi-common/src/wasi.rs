@@ -114,6 +114,8 @@ pub(crate) trait RightsExt: Sized {
     fn socket_inheriting() -> Self;
     fn tty_base() -> Self;
     fn tty_inheriting() -> Self;
+    fn address_pool_base() -> Self;
+    fn address_pool_inheriting() -> Self;
 }
 
 impl RightsExt for types::Rights {
@@ -158,7 +160,7 @@ impl RightsExt for types::Rights {
             | Self::POLL_FD_READWRITE
     }
     fn directory_inheriting() -> Self {
-        Self::all() ^ Self::SOCK_SHUTDOWN
+        Self::all()
     }
 
     // Operations that apply to regular files.
@@ -188,7 +190,6 @@ impl RightsExt for types::Rights {
             | Self::FD_WRITE
             | Self::FD_FILESTAT_GET
             | Self::POLL_FD_READWRITE
-            | Self::SOCK_SHUTDOWN
     }
     fn socket_inheriting() -> Self {
         Self::all()
@@ -204,6 +205,16 @@ impl RightsExt for types::Rights {
     }
     fn tty_inheriting() -> Self {
         Self::empty()
+    }
+
+    fn address_pool_base() -> Self {
+        Self::SOCK_CONNECT
+            | Self::SOCK_BIND
+            | Self::SOCK_LISTEN
+    }
+
+    fn address_pool_inheriting() -> Self {
+        Self::all()
     }
 }
 pub(crate) const DIRCOOKIE_START: types::Dircookie = 0;

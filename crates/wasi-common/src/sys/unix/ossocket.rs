@@ -43,6 +43,67 @@ impl From<types::SockType> for yanix::socket::SockType {
     }
 }
 
+impl From<&types::AddrIp4> for yanix::socket::InAddr {
+    fn from(addr: &types::AddrIp4) -> Self {
+        let ip = (((addr.n0 as u32) << 24) |
+            ((addr.n1 as u32) << 16) |
+            ((addr.h0 as u32) << 8) |
+            ((addr.h1 as u32) << 0)).to_be();
+
+        yanix::socket::InAddr(libc::in_addr { s_addr: ip })
+    }
+}
+
+impl From<&types::AddrIp6> for yanix::socket::In6Addr {
+    fn from(addr: &types::AddrIp6) -> Self {
+        yanix::socket::In6Addr(libc::in6_addr {
+            s6_addr: [(addr.n0 >> 8) as u8, (addr.n0 & 0xff) as u8,
+                (addr.n1 >> 8) as u8, (addr.n1 & 0xff) as u8,
+                (addr.n2 >> 8) as u8, (addr.n2 & 0xff) as u8,
+                (addr.n3 >> 8) as u8, (addr.n3 & 0xff) as u8,
+                (addr.h0 >> 8) as u8, (addr.h0 & 0xff) as u8,
+                (addr.h1 >> 8) as u8, (addr.h1 & 0xff) as u8,
+                (addr.h2 >> 8) as u8, (addr.h2 & 0xff) as u8,
+                (addr.h3 >> 8) as u8, (addr.h3 & 0xff) as u8]
+        })
+    }
+}
+
+impl From<&types::Addr> for yanix::socket::SockAddr {
+    fn from(t: &types::Addr) -> Self {
+        match t {
+            types::Addr::Ip4(addr) => {
+                use std::mem::MaybeUninit;
+                let mut storage = MaybeUninit::<libc::sockaddr_storage>::zeroed();
+                let ptr = storage.as_mut_ptr() as *mut libc::sockaddr_in;
+                unsafe {
+                    (*ptr).sin_family = yanix::socket::AddressFamily::InetAddr as libc::sa_family_t;
+                    (*ptr).sin_port = addr.port.to_be();
+                    (*ptr).sin_addr = yanix::socket::InAddr::from(&addr.addr).0;
+                };
+                yanix::socket::SockAddr {
+                    storage: unsafe { storage.assume_init() },
+                    len: std::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t
+                }
+            },
+            types::Addr::Ip6(addr) => {
+                use std::mem::MaybeUninit;
+                let mut storage = MaybeUninit::<libc::sockaddr_storage>::zeroed();
+                let ptr = storage.as_mut_ptr() as *mut libc::sockaddr_in6;
+                unsafe {
+                    (*ptr).sin6_family = yanix::socket::AddressFamily::Inet6Addr as libc::sa_family_t;
+                    (*ptr).sin6_port = addr.port.to_be();
+                    (*ptr).sin6_addr = yanix::socket::In6Addr::from(&addr.addr).0;
+                };
+                yanix::socket::SockAddr {
+                    storage: unsafe { storage.assume_init() },
+                    len: std::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t
+                }
+            }
+        }
+    }
+}
+
 impl RawOsSocket {
     /// Tries clone `self`.
     pub(crate) fn try_clone(&self) -> io::Result<Self> {
@@ -54,5 +115,10 @@ impl RawOsSocket {
         let c_socket_type = yanix::socket::SockType::from(socket_type);
         let fd = unsafe { socket(address_family, c_socket_type, None)? };
         Ok(unsafe { RawOsSocket::from_raw_fd(fd) })
+    }
+
+    pub(crate) fn connect(&self, addr: &types::Addr) -> io::Result<()> {
+        let addr = yanix::socket::SockAddr::from(addr);
+        unsafe { yanix::socket::connect(self.as_raw_fd(), &addr ) }
     }
 }

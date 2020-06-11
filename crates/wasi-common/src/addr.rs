@@ -7,7 +7,7 @@ use ipnet::IpNet;
 
 use crate::handle::HandleRights;
 use crate::wasi::Result;
-use crate::wasi::types;
+use crate::wasi::{types, RightsExt};
 use std::rc::Rc;
 
 impl From<SocketAddrV6> for types::AddrIp6Port {
@@ -136,7 +136,12 @@ pub(crate) struct FixedAddressPool {
 impl FixedAddressPool {
     pub(crate) fn new(addr: SocketAddr) -> FixedAddressPool {
         FixedAddressPool {
-            rights: Cell::new(HandleRights::from_base(types::Rights::SOCK_CONNECT)),
+            rights: Cell::new(
+                HandleRights::new(
+                    types::Rights::address_pool_base(),
+                    types::Rights::address_pool_inheriting()
+                )
+            ),
             addrs: vec![addr],
         }
     }
