@@ -159,4 +159,8 @@ impl RawOsSocket {
     pub(crate) fn shutdown(&self, how: types::Sdflags) -> io::Result<()> {
         unsafe { yanix::socket::shutdown(self.as_raw_fd(), yanix::socket::ShutdownMode::try_from(how)? ) }
     }
+
+    pub(crate) fn send(&self, buf: &[u8], _flags: types::Siflags) -> io::Result<usize> {
+        unsafe { yanix::socket::send(self.as_raw_fd(), buf, yanix::socket::SendFlags::empty() ) }
+    }
 }

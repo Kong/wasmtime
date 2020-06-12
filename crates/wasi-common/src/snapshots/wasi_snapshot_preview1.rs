@@ -920,11 +920,17 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
 
     fn sock_send(
         &self,
-        _fd: types::Fd,
-        _si_data: &types::CiovecArray<'_>,
-        _si_flags: types::Siflags,
+        fd: types::Fd,
+        buf: &GuestPtr<u8>,
+        buf_len: types::Size,
+        flags: types::Siflags,
     ) -> Result<types::Size> {
-        unimplemented!("sock_send")
+        let buf = buf.as_array(buf_len).as_slice()?;
+        let required_rights = HandleRights::from_base(types::Rights::SOCK_SEND );
+        let entry = self.get_entry(fd)?;
+        let handle = entry.as_handle(&required_rights)?;
+        let bufused = handle.sock_send(buf.as_ref(), flags)?.try_into()?;
+        Ok(bufused)
     }
 
     fn sock_shutdown(&self, fd: types::Fd, how: types::Sdflags) -> Result<()> {

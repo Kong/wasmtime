@@ -21,12 +21,8 @@ unsafe fn test_socket_server() {
     //loop {
         let childfd = wasi::sock_accept(fd).unwrap();
 
-        let contents = "Hello World";
-        let ciovec = wasi::Ciovec {
-            buf: contents.as_ptr() as *const _,
-            buf_len: contents.len(),
-        };
-        let sent = wasi::sock_send(childfd, &mut [ciovec], 0);
+        let mut contents = String::from("Hello World");
+        let sent = wasi::sock_send(childfd, contents.as_mut_ptr(), contents.len(), 0);
 
         wasi::sock_shutdown(childfd, wasi::SDFLAGS_RD | wasi::SDFLAGS_WR);
     //}
@@ -56,11 +52,7 @@ unsafe fn test_socket_client() {
         .expect("cannot connect to localhost");
 
     let contents = &mut [0u8; 64];
-    let iovec = wasi::Iovec {
-        buf: contents.as_mut_ptr() as *mut _,
-        buf_len: contents.len(),
-    };
-    wasi::sock_recv(fd, &mut [iovec], wasi::RIFLAGS_RECV_WAITALL);
+    wasi::sock_recv(fd, contents.as_mut_ptr(), contents.len(), wasi::RIFLAGS_RECV_WAITALL);
 
     wasi::sock_shutdown(fd, wasi::SDFLAGS_RD | wasi::SDFLAGS_WR);
 }

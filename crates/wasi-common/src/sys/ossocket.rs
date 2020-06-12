@@ -90,4 +90,9 @@ impl Handle for OsSocket {
         let size = self.handle.recv(buf, flags)?;
         Ok(size)
     }
+
+    fn sock_send(&self, buf: &[u8], flags: types::Siflags) -> wasi::Result<usize> {
+        let size = self.handle.send(buf, flags)?;
+        Ok(size)
+    }
 }

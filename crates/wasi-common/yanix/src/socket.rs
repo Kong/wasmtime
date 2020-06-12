@@ -1,6 +1,7 @@
 use std::io::Result;
-use bitflags::bitflags;
 use std::os::unix::prelude::*;
+
+use bitflags::bitflags;
 
 use crate::{from_result, from_success_code};
 
@@ -52,8 +53,16 @@ impl SockAddr {
 
 bitflags! {
     pub struct RecvFlags: libc::c_int {
+        const OOB = libc::MSG_OOB;
         const PEEK = libc::MSG_PEEK;
         const WAIT_ALL = libc::MSG_WAITALL;
+    }
+}
+
+bitflags! {
+    pub struct SendFlags: libc::c_int {
+        const OOB = libc::MSG_OOB;
+        const DONTROUTE = libc::MSG_DONTROUTE;
     }
 }
 
@@ -95,8 +104,18 @@ pub unsafe fn recv(fd: RawFd, buf: &mut [u8], flags: RecvFlags) -> Result<usize>
     Ok(bufused as usize)
 }
 
+pub unsafe fn send(fd: RawFd, buf: &[u8], flags: SendFlags) -> Result<usize> {
+    let bufused = from_result(libc::send(
+        fd,
+        buf.as_ptr() as *const libc::c_void,
+        buf.len(),
+        flags.bits,
+    ))?;
+    Ok(bufused as usize)
+}
+
 pub unsafe fn shutdown(fd: RawFd, how: ShutdownMode) -> Result<()> {
-    from_success_code(libc::shutdown(fd, how as libc::c_int) )?;
+    from_success_code(libc::shutdown(fd, how as libc::c_int))?;
     Ok(())
 }
 
