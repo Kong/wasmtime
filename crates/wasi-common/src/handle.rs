@@ -219,4 +219,5 @@ pub trait Handle {
     fn sock_listen(&self, _backlog: u32) -> Result<()> { Err(Errno::Acces) }
     fn sock_accept(&self) -> Result<Box<dyn Handle>> { Err(Errno::Acces) }
     fn sock_shutdown(&self, _how: types::Sdflags) -> Result<()> { Err(Errno::Acces) }
+    fn sock_recv(&self, _buf: &mut [u8], _flags: types::Riflags) -> Result<usize> { Err(Errno::Acces) }
 }

@@ -905,11 +905,17 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
 
     fn sock_recv(
         &self,
-        _fd: types::Fd,
-        _ri_data: &types::IovecArray<'_>,
-        _ri_flags: types::Riflags,
+        fd: types::Fd,
+        buf: &GuestPtr<u8>,
+        buf_len: types::Size,
+        flags: types::Riflags,
     ) -> Result<types::Size> {
-        unimplemented!("sock_recv")
+        let mut buf = buf.as_array(buf_len).as_slice()?;
+        let required_rights = HandleRights::from_base(types::Rights::SOCK_RECV );
+        let entry = self.get_entry(fd)?;
+        let handle = entry.as_handle(&required_rights)?;
+        let bufused = handle.sock_recv(buf.as_mut(), flags)?.try_into()?;
+        Ok(bufused)
     }
 
     fn sock_send(

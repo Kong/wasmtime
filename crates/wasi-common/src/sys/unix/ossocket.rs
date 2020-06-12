@@ -1,4 +1,5 @@
 use std::io;
+use std::convert::TryFrom;
 use yanix::socket::socket;
 
 use crate::wasi::types;
@@ -104,6 +105,35 @@ impl From<&types::Addr> for yanix::socket::SockAddr {
     }
 }
 
+impl From<types::Riflags> for yanix::socket::RecvFlags {
+    fn from(flags: types::Riflags) -> Self {
+        let mut out = yanix::socket::RecvFlags::empty();
+        if flags & types::Riflags::RECV_PEEK == types::Riflags::RECV_PEEK {
+            out |= yanix::socket::RecvFlags::PEEK;
+        }
+        if flags & types::Riflags::RECV_WAITALL == types::Riflags::RECV_WAITALL {
+            out |= yanix::socket::RecvFlags::WAIT_ALL;
+        }
+        out
+    }
+}
+
+impl TryFrom<types::Sdflags> for yanix::socket::ShutdownMode {
+    type Error = std::io::Error;
+
+    fn try_from(flags: types::Sdflags) -> io::Result<Self> {
+        if (flags & types::Sdflags::RD == types::Sdflags::RD) && (flags & types::Sdflags::WR == types::Sdflags::WR) {
+            Ok(yanix::socket::ShutdownMode::Both)
+        } else if flags & types::Sdflags::RD == types::Sdflags::RD {
+            Ok(yanix::socket::ShutdownMode::Read)
+        } else if flags & types::Sdflags::WR == types::Sdflags::WR {
+            Ok(yanix::socket::ShutdownMode::Write)
+        } else {
+            Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "bad flag"))
+        }
+    }
+}
+
 impl RawOsSocket {
     /// Tries clone `self`.
     pub(crate) fn try_clone(&self) -> io::Result<Self> {
@@ -120,5 +150,13 @@ impl RawOsSocket {
     pub(crate) fn connect(&self, addr: &types::Addr) -> io::Result<()> {
         let addr = yanix::socket::SockAddr::from(addr);
         unsafe { yanix::socket::connect(self.as_raw_fd(), &addr ) }
+    }
+
+    pub(crate) fn recv(&self, buf: &mut [u8], flags: types::Riflags) -> io::Result<usize> {
+        unsafe { yanix::socket::recv(self.as_raw_fd(), buf, yanix::socket::RecvFlags::from(flags) ) }
+    }
+
+    pub(crate) fn shutdown(&self, how: types::Sdflags) -> io::Result<()> {
+        unsafe { yanix::socket::shutdown(self.as_raw_fd(), yanix::socket::ShutdownMode::try_from(how)? ) }
     }
 }

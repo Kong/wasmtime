@@ -81,7 +81,13 @@ impl Handle for OsSocket {
         unimplemented!()
     }
 
-    fn sock_shutdown(&self, _how: types::Sdflags) -> wasi::Result<()> {
-        unimplemented!()
+    fn sock_shutdown(&self, how: types::Sdflags) -> wasi::Result<()> {
+        self.handle.shutdown(how)?;
+        Ok(())
+    }
+
+    fn sock_recv(&self, buf: &mut [u8], flags: types::Riflags) -> wasi::Result<usize> {
+        let size = self.handle.recv(buf, flags)?;
+        Ok(size)
     }
 }

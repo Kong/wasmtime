@@ -1,4 +1,5 @@
 use std::io::Result;
+use bitflags::bitflags;
 use std::os::unix::prelude::*;
 
 use crate::{from_result, from_success_code};
@@ -49,6 +50,21 @@ impl SockAddr {
     }
 }
 
+bitflags! {
+    pub struct RecvFlags: libc::c_int {
+        const PEEK = libc::MSG_PEEK;
+        const WAIT_ALL = libc::MSG_WAITALL;
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(i32)]
+pub enum ShutdownMode {
+    Write = libc::SHUT_WR,
+    Read = libc::SHUT_RD,
+    Both = libc::SHUT_RDWR,
+}
+
 pub unsafe fn socket(af: AddressFamily, t: SockType, p: Option<SockProtocol>) -> Result<RawFd> {
     let protocol: libc::c_int = match p {
         None => 0,
@@ -62,11 +78,26 @@ pub unsafe fn listen(fd: RawFd, backlog: usize) -> Result<()> {
 }
 
 pub unsafe fn bind(fd: RawFd, addr: &SockAddr) -> Result<()> {
-    from_success_code(libc::bind(fd, addr.as_ptr(), addr.len()) )
+    from_success_code(libc::bind(fd, addr.as_ptr(), addr.len()))
 }
 
 pub unsafe fn connect(fd: RawFd, addr: &SockAddr) -> Result<()> {
-    from_success_code(libc::connect(fd, addr.as_ptr(), addr.len()) )
+    from_success_code(libc::connect(fd, addr.as_ptr(), addr.len()))
+}
+
+pub unsafe fn recv(fd: RawFd, buf: &mut [u8], flags: RecvFlags) -> Result<usize> {
+    let bufused = from_result(libc::recv(
+        fd,
+        buf.as_mut_ptr() as *mut libc::c_void,
+        buf.len(),
+        flags.bits,
+    ))?;
+    Ok(bufused as usize)
+}
+
+pub unsafe fn shutdown(fd: RawFd, how: ShutdownMode) -> Result<()> {
+    from_success_code(libc::shutdown(fd, how as libc::c_int) )?;
+    Ok(())
 }
 
 pub unsafe fn get_socket_type(fd: RawFd) -> Result<SockType> {
