@@ -211,6 +211,7 @@ impl RightsExt for types::Rights {
         Self::SOCK_CONNECT
             | Self::SOCK_BIND
             | Self::SOCK_LISTEN
+            | Self::SOCK_ACCEPT
     }
 
     fn address_pool_inheriting() -> Self {

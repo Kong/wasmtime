@@ -86,6 +86,16 @@ pub unsafe fn listen(fd: RawFd, backlog: usize) -> Result<()> {
     from_success_code(libc::listen(fd, backlog as libc::c_int))
 }
 
+
+pub unsafe fn accept(fd: RawFd) -> Result<(RawFd, SockAddr)> {
+    let mut storage: libc::sockaddr_storage = std::mem::zeroed();
+    let mut len = std::mem::size_of_val(&storage) as libc::socklen_t;
+
+    let fd = from_result( libc::accept(fd, &mut storage as *mut _ as *mut _, &mut len) )?;
+
+    Ok((fd, SockAddr { storage, len }))
+}
+
 pub unsafe fn bind(fd: RawFd, addr: &SockAddr) -> Result<()> {
     from_success_code(libc::bind(fd, addr.as_ptr(), addr.len()))
 }

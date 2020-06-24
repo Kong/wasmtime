@@ -69,16 +69,25 @@ impl Handle for OsSocket {
         Ok(())
     }
 
-    fn sock_bind(&self, _addr: &types::Addr) -> wasi::Result<()> {
-        unimplemented!()
+    fn sock_bind(&self, addr: &types::Addr) -> wasi::Result<()> {
+        self.handle.bind(addr)?;
+        Ok(())
     }
 
-    fn sock_listen(&self, _backlog: u32) -> wasi::Result<()> {
-        unimplemented!()
+    fn sock_listen(&self, backlog: u32) -> wasi::Result<()> {
+        self.handle.listen(backlog)?;
+        Ok(())
     }
 
     fn sock_accept(&self) -> wasi::Result<Box<dyn Handle>> {
-        unimplemented!()
+        let (raw_socket, _addr) = self.handle.accept()?;
+        let rights = Cell::new( self.get_rights() );
+        let socket = OsSocket {
+            socket_type: self.socket_type,
+            rights,
+            handle: raw_socket
+        };
+        Ok(socket.try_clone()?)
     }
 
     fn sock_shutdown(&self, how: types::Sdflags) -> wasi::Result<()> {

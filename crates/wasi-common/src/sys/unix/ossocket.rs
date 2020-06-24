@@ -55,6 +55,33 @@ impl From<&types::AddrIp4> for yanix::socket::InAddr {
     }
 }
 
+impl From<yanix::socket::InAddr> for types::AddrIp4 {
+    fn from(addr: yanix::socket::InAddr) -> Self {
+        let ip = u32::from_be(addr.0.s_addr);
+        types::AddrIp4 {
+            n0: (ip >> 24) as u8,
+            n1: (ip >> 16) as u8,
+            h0: (ip >> 8) as u8,
+            h1: (ip >> 0) as u8,
+        }
+    }
+}
+
+impl From<yanix::socket::In6Addr> for types::AddrIp6 {
+    fn from(addr: yanix::socket::In6Addr) -> Self {
+        types::AddrIp6 {
+            n0: ((addr.0.s6_addr[0] as u16) << 8) | ((0xff & addr.0.s6_addr[1]) as u16),
+            n1: ((addr.0.s6_addr[2] as u16) << 8) | ((0xff & addr.0.s6_addr[3]) as u16),
+            n2: ((addr.0.s6_addr[4] as u16) << 8) | ((0xff & addr.0.s6_addr[5]) as u16),
+            n3: ((addr.0.s6_addr[6] as u16) << 8) | ((0xff & addr.0.s6_addr[7]) as u16),
+            h0: ((addr.0.s6_addr[8] as u16) << 8) | ((0xff & addr.0.s6_addr[9]) as u16),
+            h1: ((addr.0.s6_addr[10] as u16) << 8) | ((0xff & addr.0.s6_addr[11]) as u16),
+            h2: ((addr.0.s6_addr[12] as u16) << 8) | ((0xff & addr.0.s6_addr[13]) as u16),
+            h3: ((addr.0.s6_addr[14] as u16) << 8) | ((0xff & addr.0.s6_addr[15]) as u16),
+        }
+    }
+}
+
 impl From<&types::AddrIp6> for yanix::socket::In6Addr {
     fn from(addr: &types::AddrIp6) -> Self {
         yanix::socket::In6Addr(libc::in6_addr {
@@ -105,6 +132,35 @@ impl From<&types::Addr> for yanix::socket::SockAddr {
     }
 }
 
+impl TryFrom<&yanix::socket::SockAddr> for types::Addr {
+    type Error = io::Error;
+
+    fn try_from(t: &yanix::socket::SockAddr) -> Result<Self, Self::Error> {
+        let storage = &t.storage as *const libc::sockaddr_storage;
+        if t.storage.ss_family as libc::c_int == libc::AF_INET {
+            let sockaddr_in = storage as *const libc::sockaddr_in;
+
+            unsafe {
+                Ok(types::Addr::Ip4(types::AddrIp4Port {
+                    addr: types::AddrIp4::from(yanix::socket::InAddr((*sockaddr_in).sin_addr)),
+                    port: u16::from_be((*sockaddr_in).sin_port),
+                }))
+            }
+        } else if t.storage.ss_family as libc::c_int == libc::AF_INET6 {
+            let sockaddr_in6 = storage as *const libc::sockaddr_in6;
+
+            unsafe {
+                Ok(types::Addr::Ip6(types::AddrIp6Port {
+                    addr: types::AddrIp6::from(yanix::socket::In6Addr((*sockaddr_in6).sin6_addr)),
+                    port: u16::from_be((*sockaddr_in6).sin6_port),
+                }))
+            }
+        } else {
+            Err(io::Error::from_raw_os_error(libc::EINVAL))
+        }
+    }
+}
+
 impl From<types::Riflags> for yanix::socket::RecvFlags {
     fn from(flags: types::Riflags) -> Self {
         let mut out = yanix::socket::RecvFlags::empty();
@@ -145,6 +201,24 @@ impl RawOsSocket {
         let c_socket_type = yanix::socket::SockType::from(socket_type);
         let fd = unsafe { socket(address_family, c_socket_type, None)? };
         Ok(unsafe { RawOsSocket::from_raw_fd(fd) })
+    }
+
+    pub(crate) fn bind(&self, addr: &types::Addr) -> io::Result<()> {
+        let addr = yanix::socket::SockAddr::from(addr);
+        unsafe { yanix::socket::bind(self.as_raw_fd(), &addr ) }
+    }
+
+    pub(crate) fn listen(&self, backlog: u32) -> io::Result<()> {
+        unsafe { yanix::socket::listen(self.as_raw_fd(), backlog as usize) }
+    }
+
+    pub(crate) fn accept(&self) -> io::Result<(RawOsSocket, types::Addr)> {
+        unsafe {
+            let fd_and_addr = yanix::socket::accept(self.as_raw_fd())?;
+            let fd = RawOsSocket::from_raw_fd(fd_and_addr.0);
+            let addr = types::Addr::try_from(&fd_and_addr.1)?;
+            Ok((fd, addr))
+        }
     }
 
     pub(crate) fn connect(&self, addr: &types::Addr) -> io::Result<()> {
