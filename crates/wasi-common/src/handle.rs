@@ -221,4 +221,6 @@ pub trait Handle {
     fn sock_shutdown(&self, _how: types::Sdflags) -> Result<()> { Err(Errno::Acces) }
     fn sock_recv(&self, _buf: &mut [u8], _flags: types::Riflags) -> Result<usize> { Err(Errno::Acces) }
     fn sock_send(&self, _buf: &[u8], _flags: types::Siflags) -> Result<usize> { Err(Errno::Acces) }
+    fn sock_addr_local(&self) -> Result<types::Addr> { Err(Errno::Acces) }
+    fn sock_addr_remote(&self) -> Result<types::Addr> { Err(Errno::Acces) }
 }

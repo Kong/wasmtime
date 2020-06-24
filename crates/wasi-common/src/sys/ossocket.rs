@@ -104,4 +104,14 @@ impl Handle for OsSocket {
         let size = self.handle.send(buf, flags)?;
         Ok(size)
     }
+
+    fn sock_addr_local(&self) -> wasi::Result<types::Addr> {
+        let addr = self.handle.addr_local()?;
+        Ok(addr)
+    }
+
+    fn sock_addr_remote(&self) -> wasi::Result<types::Addr> {
+        let addr = self.handle.addr_remote()?;
+        Ok(addr)
+    }
 }

@@ -237,4 +237,18 @@ impl RawOsSocket {
     pub(crate) fn send(&self, buf: &[u8], _flags: types::Siflags) -> io::Result<usize> {
         unsafe { yanix::socket::send(self.as_raw_fd(), buf, yanix::socket::SendFlags::empty() ) }
     }
+
+    pub(crate) fn addr_local(&self) -> io::Result<types::Addr> {
+        unsafe {
+            let addr = yanix::socket::sock_name(self.as_raw_fd())?;
+            types::Addr::try_from(&addr)
+        }
+    }
+
+    pub(crate) fn addr_remote(&self) -> io::Result<types::Addr> {
+        unsafe {
+            let addr = yanix::socket::peer_name(self.as_raw_fd())?;
+            types::Addr::try_from(&addr)
+        }
+    }
 }

@@ -818,7 +818,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
     ) -> Result<types::Size> {
         let mut buf = buf.cast::<types::Addr>().clone();
         let host = host.as_str()?;
-        let size = <types::Addr as GuestType>::guest_size().try_into()?;
+        let size = <types::Addr as GuestType>::guest_size();
         let mut bufused = 0;
         let result = self.addr_resolve(host.as_ref(), port )?;
         for addr in result {
@@ -831,6 +831,52 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
             bufused += size;
         }
         Ok(bufused.try_into().unwrap())
+    }
+
+    fn sock_addr_local(
+        &self,
+        fd: types::Fd,
+        buf: &GuestPtr<u8>,
+        buf_len: types::Size
+    ) -> Result<()> {
+        let buf = buf.cast::<types::Addr>().clone();
+        let size = <types::Addr as GuestType>::guest_size();
+
+        if buf_len < size {
+            Err(Errno::Nomem)
+        } else {
+            let required_rights = HandleRights::from_base(types::Rights::SOCK_ADDR_LOCAL );
+            let entry = self.get_entry(fd)?;
+
+            let handle = entry.as_handle(&required_rights)?;
+            let addr = handle.sock_addr_local()?;
+            buf.write(addr)?;
+
+            Ok(())
+        }
+    }
+
+    fn sock_addr_remote(
+        &self,
+        fd: types::Fd,
+        buf: &GuestPtr<u8>,
+        buf_len: types::Size
+    ) -> Result<()> {
+        let buf = buf.cast::<types::Addr>().clone();
+        let size = <types::Addr as GuestType>::guest_size();
+
+        if buf_len < size {
+            Err(Errno::Nomem)
+        } else {
+            let required_rights = HandleRights::from_base(types::Rights::SOCK_ADDR_REMOTE );
+            let entry = self.get_entry(fd)?;
+
+            let handle = entry.as_handle(&required_rights)?;
+            let addr = handle.sock_addr_remote()?;
+            buf.write(addr)?;
+
+            Ok(())
+        }
     }
 
     fn sock_open(

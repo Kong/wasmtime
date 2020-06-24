@@ -124,6 +124,33 @@ pub unsafe fn send(fd: RawFd, buf: &[u8], flags: SendFlags) -> Result<usize> {
     Ok(bufused as usize)
 }
 
+pub unsafe fn sock_name(fd: RawFd) -> Result<SockAddr> {
+    let mut storage: libc::sockaddr_storage = std::mem::zeroed();
+    let mut len = std::mem::size_of_val(&storage) as libc::socklen_t;
+
+    from_result(libc::getsockname(
+        fd,
+        &mut storage as *mut _ as *mut _,
+        &mut len
+    ))?;
+
+    Ok(SockAddr { storage, len })
+}
+
+pub unsafe fn peer_name(fd: RawFd) -> Result<SockAddr> {
+    let mut storage: libc::sockaddr_storage = std::mem::zeroed();
+    let mut len = std::mem::size_of_val(&storage) as libc::socklen_t;
+
+    from_result(libc::getpeername(
+        fd,
+        &mut storage as *mut _ as *mut _,
+        &mut len
+    ))?;
+
+    Ok(SockAddr { storage, len })
+}
+
+
 pub unsafe fn shutdown(fd: RawFd, how: ShutdownMode) -> Result<()> {
     from_success_code(libc::shutdown(fd, how as libc::c_int))?;
     Ok(())
