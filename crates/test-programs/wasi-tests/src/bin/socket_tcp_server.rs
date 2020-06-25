@@ -41,17 +41,18 @@ unsafe fn test_socket_tcp_server() {
     let childfd = wasi::sock_accept(fd)
         .expect("unable to accept connection");
     let remote_addr = sock_addr_remote(childfd);
+    println!("client connected {}", wasi_tests::PrintableAddr(remote_addr));
 
-    let mut contents = String::from("Hello World");
+    let mut contents = String::from("Hello World from Kong");
     let sent = wasi::sock_send(childfd, contents.as_mut_ptr(), contents.len(), 0)
         .expect("cannot send");
-    println!("Sent {} bytes", sent);
+    println!("sent {} bytes", sent);
 
-    wasi::sock_shutdown(childfd, wasi::SDFLAGS_RD | wasi::SDFLAGS_WR)
+    wasi::sock_close(childfd)
         .expect("cannot shutdown child socket");
     //}
 
-    wasi::sock_shutdown(fd, wasi::SDFLAGS_RD | wasi::SDFLAGS_WR)
+    wasi::sock_close(fd)
         .expect("cannot shutdown socket");
 }
 

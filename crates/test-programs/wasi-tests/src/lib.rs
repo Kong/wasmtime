@@ -79,3 +79,18 @@ pub unsafe fn sock_addr_remote(fd: u32) -> wasi::Addr {
     let addr_ptr = buf.as_ptr() as *const wasi::Addr;
     addr_ptr.read_unaligned()
 }
+
+pub struct PrintableAddr(pub wasi::Addr);
+
+impl std::fmt::Display for PrintableAddr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.0.tag {
+            wasi::ADDR_TYPE_IP4 => {
+                unsafe {
+                    write!(f, "{}.{}.{}.{}:{}", self.0.u.ip4.addr.n0, self.0.u.ip4.addr.n1, self.0.u.ip4.addr.h0, self.0.u.ip4.addr.h1, self.0.u.ip4.port)
+                }
+            }
+            _ => write!(f, "invalid address type")
+        }
+    }
+}

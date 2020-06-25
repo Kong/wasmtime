@@ -20,9 +20,11 @@ unsafe fn test_socket_tcp_client() {
         .expect("cannot connect to localhost");
 
     let contents = &mut [0u8; 64];
-    wasi::sock_recv(fd, contents.as_mut_ptr(), contents.len(), wasi::RIFLAGS_RECV_WAITALL);
+    wasi::sock_recv(fd, contents.as_mut_ptr(), contents.len(), wasi::RIFLAGS_RECV_WAITALL)
+        .expect("cannot receive content");
 
-    wasi::sock_shutdown(fd, wasi::SDFLAGS_RD | wasi::SDFLAGS_WR);
+    wasi::sock_shutdown(fd, wasi::SDFLAGS_RD | wasi::SDFLAGS_WR)
+        .expect("cannot shutdown socket");
 }
 
 fn main() {
