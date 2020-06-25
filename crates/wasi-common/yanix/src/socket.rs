@@ -156,6 +156,32 @@ pub unsafe fn shutdown(fd: RawFd, how: ShutdownMode) -> Result<()> {
     Ok(())
 }
 
+pub unsafe fn set_reuse_addr(fd: RawFd, reuse: bool) -> Result<()> {
+    let reuse = &(reuse as libc::c_int) as *const libc::c_int as *const libc::c_void;
+    let size = std::mem::size_of::<libc::c_int>() as libc::socklen_t;
+    from_success_code( libc::setsockopt(fd, libc::SOL_SOCKET, libc::SO_REUSEADDR, reuse, size) )
+}
+
+pub unsafe fn get_reuse_addr(fd: RawFd) -> Result<bool> {
+    let mut reuse: libc::c_int = std::mem::zeroed();
+    let mut len = std::mem::size_of::<libc::c_int>() as libc::socklen_t;
+    from_success_code( libc::getsockopt(fd, libc::SOL_SOCKET, libc::SO_REUSEADDR, &mut reuse as *mut _ as *mut _, &mut len) )?;
+    Ok(reuse != 0)
+}
+
+pub unsafe fn set_reuse_port(fd: RawFd, reuse: bool) -> Result<()> {
+    let reuse = &(reuse as libc::c_int) as *const libc::c_int as *const libc::c_void;
+    let size = std::mem::size_of::<libc::c_int>() as libc::socklen_t;
+    from_success_code( libc::setsockopt(fd, libc::SOL_SOCKET, libc::SO_REUSEPORT, reuse, size) )
+}
+
+pub unsafe fn get_reuse_port(fd: RawFd) -> Result<bool> {
+    let mut reuse: libc::c_int = std::mem::zeroed();
+    let mut len = std::mem::size_of::<libc::c_int>() as libc::socklen_t;
+    from_success_code( libc::getsockopt(fd, libc::SOL_SOCKET, libc::SO_REUSEPORT, &mut reuse as *mut _ as *mut _, &mut len) )?;
+    Ok(reuse != 0)
+}
+
 pub unsafe fn get_socket_type(fd: RawFd) -> Result<SockType> {
     use std::mem::MaybeUninit;
     let mut buffer = MaybeUninit::<SockType>::zeroed().assume_init();

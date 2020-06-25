@@ -1,5 +1,7 @@
 use more_asserts::assert_gt;
 
+const BUF_LEN: usize = 20;
+
 // The `wasi` crate version 0.9.0 and beyond, doesn't
 // seem to define these constants, so we do it ourselves.
 pub const STDIN_FD: wasi::Fd = 0x0;
@@ -60,4 +62,20 @@ pub unsafe fn drop_rights(fd: wasi::Fd, drop_base: wasi::Rights, drop_inheriting
     let new_inheriting = current_inheriting & !drop_inheriting;
 
     wasi::fd_fdstat_set_rights(fd, new_base, new_inheriting).expect("dropping fd rights");
+}
+
+pub unsafe fn sock_addr_local(fd: u32) -> wasi::Addr {
+    let mut buf: [u8; BUF_LEN] = [0; BUF_LEN];
+    wasi::sock_addr_local(fd,  buf.as_mut_ptr(), BUF_LEN)
+        .expect("unable to obtain local bound address");
+    let addr_ptr = buf.as_ptr() as *const wasi::Addr;
+    addr_ptr.read_unaligned()
+}
+
+pub unsafe fn sock_addr_remote(fd: u32) -> wasi::Addr {
+    let mut buf: [u8; BUF_LEN] = [0; BUF_LEN];
+    wasi::sock_addr_remote(fd,  buf.as_mut_ptr(), BUF_LEN)
+        .expect("unable to obtain local bound address");
+    let addr_ptr = buf.as_ptr() as *const wasi::Addr;
+    addr_ptr.read_unaligned()
 }

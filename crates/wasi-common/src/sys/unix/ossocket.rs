@@ -251,4 +251,28 @@ impl RawOsSocket {
             types::Addr::try_from(&addr)
         }
     }
+
+    pub(crate) fn set_reuse_addr(&self, reuse: bool) -> io::Result<()> {
+        unsafe {
+            yanix::socket::set_reuse_addr(self.as_raw_fd(), reuse)
+        }
+    }
+
+    pub(crate) fn get_reuse_addr(&self) -> io::Result<bool> {
+        unsafe {
+            yanix::socket::get_reuse_addr(self.as_raw_fd())
+        }
+    }
+
+    pub(crate) fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
+        unsafe {
+            yanix::socket::set_reuse_port(self.as_raw_fd(), reuse)
+        }
+    }
+
+    pub(crate) fn get_reuse_port(&self) -> io::Result<bool> {
+        unsafe {
+            yanix::socket::get_reuse_port(self.as_raw_fd())
+        }
+    }
 }

@@ -223,4 +223,8 @@ pub trait Handle {
     fn sock_send(&self, _buf: &[u8], _flags: types::Siflags) -> Result<usize> { Err(Errno::Acces) }
     fn sock_addr_local(&self) -> Result<types::Addr> { Err(Errno::Acces) }
     fn sock_addr_remote(&self) -> Result<types::Addr> { Err(Errno::Acces) }
+    fn sock_set_reuse_addr(&self, _reuse: bool) -> Result<()> { Err(Errno::Acces) }
+    fn sock_get_reuse_addr(&self) -> Result<bool> { Err(Errno::Acces) }
+    fn sock_set_reuse_port(&self, _reuse: bool) -> Result<()> { Err(Errno::Acces) }
+    fn sock_get_reuse_port(&self) -> Result<bool> { Err(Errno::Acces) }
 }

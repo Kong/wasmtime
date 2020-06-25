@@ -889,6 +889,54 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         self.insert_entry(entry)
     }
 
+    fn sock_close(&self, fd: types::Fd) -> Result<()> {
+        self.fd_close(fd)
+    }
+
+    fn sock_set_reuse_addr(
+        &self,
+        fd: types::Fd,
+        reuse: u8,
+    ) -> Result<()> {
+        let required_rights = HandleRights::empty();
+        let entry = self.get_entry(fd)?;
+        let handle = entry.as_handle(&required_rights)?;
+        handle.sock_set_reuse_addr(reuse != 0)
+    }
+
+    fn sock_get_reuse_addr(
+        &self,
+        fd: types::Fd,
+    ) -> Result<u8> {
+        let required_rights = HandleRights::empty();
+        let entry = self.get_entry(fd)?;
+        let handle = entry.as_handle(&required_rights)?;
+        let reuse = handle.sock_get_reuse_addr()?;
+        Ok(reuse as u8)
+    }
+
+    fn sock_set_reuse_port(
+        &self,
+        fd: types::Fd,
+        reuse: u8,
+    ) -> Result<()> {
+        let required_rights = HandleRights::empty();
+        let entry = self.get_entry(fd)?;
+        let handle = entry.as_handle(&required_rights)?;
+        handle.sock_set_reuse_port(reuse != 0)
+    }
+
+    fn sock_get_reuse_port(
+        &self,
+        fd: types::Fd,
+    ) -> Result<u8> {
+        let required_rights = HandleRights::empty();
+        let entry = self.get_entry(fd)?;
+        let handle = entry.as_handle(&required_rights)?;
+        let reuse = handle.sock_get_reuse_port()?;
+        Ok(reuse as u8)
+    }
+
     fn sock_connect(
         &self,
         fd: types::Fd,

@@ -114,4 +114,24 @@ impl Handle for OsSocket {
         let addr = self.handle.addr_remote()?;
         Ok(addr)
     }
+
+    fn sock_set_reuse_addr(&self, reuse: bool) -> wasi::Result<()> {
+        self.handle.set_reuse_addr(reuse)?;
+        Ok(())
+    }
+
+    fn sock_get_reuse_addr(&self) -> wasi::Result<bool> {
+        let reuse = self.handle.get_reuse_addr()?;
+        Ok(reuse)
+    }
+
+    fn sock_set_reuse_port(&self, reuse: bool) -> wasi::Result<()> {
+        self.handle.set_reuse_port(reuse)?;
+        Ok(())
+    }
+
+    fn sock_get_reuse_port(&self) -> wasi::Result<bool> {
+        let reuse = self.handle.get_reuse_port()?;
+        Ok(reuse)
+    }
 }

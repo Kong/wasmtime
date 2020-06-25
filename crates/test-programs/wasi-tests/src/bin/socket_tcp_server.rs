@@ -1,20 +1,5 @@
-const BUF_LEN: usize = 20;
-
-unsafe fn sock_addr_local(fd: u32) -> wasi::Addr {
-    let mut buf: [u8; BUF_LEN] = [0; BUF_LEN];
-    let bufused = wasi::sock_addr_local(fd,  buf.as_mut_ptr(), BUF_LEN)
-        .expect("unable to obtain local bound address");
-    let addr_ptr = buf.as_ptr() as *const wasi::Addr;
-    addr_ptr.read_unaligned()
-}
-
-unsafe fn sock_addr_remote(fd: u32) -> wasi::Addr {
-    let mut buf: [u8; BUF_LEN] = [0; BUF_LEN];
-    let bufused = wasi::sock_addr_remote(fd,  buf.as_mut_ptr(), BUF_LEN)
-        .expect("unable to obtain local bound address");
-    let addr_ptr = buf.as_ptr() as *const wasi::Addr;
-    addr_ptr.read_unaligned()
-}
+use wasi_tests::sock_addr_local;
+use wasi_tests::sock_addr_remote;
 
 unsafe fn test_socket_tcp_server() {
     let mut addr = wasi::Addr {
@@ -62,10 +47,12 @@ unsafe fn test_socket_tcp_server() {
         .expect("cannot send");
     println!("Sent {} bytes", sent);
 
-    wasi::sock_shutdown(childfd, wasi::SDFLAGS_RD | wasi::SDFLAGS_WR);
+    wasi::sock_shutdown(childfd, wasi::SDFLAGS_RD | wasi::SDFLAGS_WR)
+        .expect("cannot shutdown child socket");
     //}
 
-    wasi::sock_shutdown(fd, wasi::SDFLAGS_RD | wasi::SDFLAGS_WR);
+    wasi::sock_shutdown(fd, wasi::SDFLAGS_RD | wasi::SDFLAGS_WR)
+        .expect("cannot shutdown socket");
 }
 
 fn main() {

@@ -270,6 +270,12 @@ mod wasi_tests {
                 "big_random_buf" => true,
                 "clock_time_get" => true,
                 "sched_yield" => true,
+                "addr_resolve" => true,
+                "socket_tcp_client" => true,
+                "socket_tcp_server" => true,
+                "sock_bind" => true,
+                "sock_set_reuse_addr" => true,
+                "sock_set_reuse_port" => true,
                 _ => false,
             }
         } else {
