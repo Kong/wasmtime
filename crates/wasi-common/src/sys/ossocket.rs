@@ -144,4 +144,14 @@ impl Handle for OsSocket {
         let size = self.handle.get_recv_buf_size()?;
         Ok(size)
     }
+
+    fn sock_set_send_buf_size(&self, size: types::Size) -> wasi::Result<()> {
+        self.handle.set_send_buf_size(size)?;
+        Ok(())
+    }
+
+    fn sock_get_send_buf_size(&self) -> wasi::Result<types::Size> {
+        let size = self.handle.get_send_buf_size()?;
+        Ok(size)
+    }
 }

@@ -959,6 +959,28 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         Ok(size)
     }
 
+    fn sock_set_send_buf_size(
+        &self,
+        fd: types::Fd,
+        size: types::Size,
+    ) -> Result<()> {
+        let required_rights = HandleRights::empty();
+        let entry = self.get_entry(fd)?;
+        let handle = entry.as_handle(&required_rights)?;
+        handle.sock_set_send_buf_size(size)
+    }
+
+    fn sock_get_send_buf_size(
+        &self,
+        fd: types::Fd,
+    ) -> Result<types::Size> {
+        let required_rights = HandleRights::empty();
+        let entry = self.get_entry(fd)?;
+        let handle = entry.as_handle(&required_rights)?;
+        let size = handle.sock_get_send_buf_size()?;
+        Ok(size)
+    }
+
     fn sock_connect(
         &self,
         fd: types::Fd,
