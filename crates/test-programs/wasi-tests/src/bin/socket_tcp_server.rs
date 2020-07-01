@@ -1,7 +1,8 @@
+use std::{env, process};
 use wasi_tests::sock_addr_local;
 use wasi_tests::sock_addr_remote;
 
-unsafe fn test_socket_tcp_server() {
+unsafe fn test_socket_tcp_server(port: u16) {
     let mut addr = wasi::Addr {
         tag: wasi::ADDR_TYPE_IP4,
         u: wasi::AddrU {
@@ -12,7 +13,7 @@ unsafe fn test_socket_tcp_server() {
                     h0: 0,
                     h1: 1,
                 },
-                port: 8080,
+                port,
             }
         },
     };
@@ -43,10 +44,16 @@ unsafe fn test_socket_tcp_server() {
     let remote_addr = sock_addr_remote(childfd);
     println!("client connected {}", wasi_tests::PrintableAddr(remote_addr));
 
-    let mut contents = String::from("Hello World from Kong");
-    let sent = wasi::sock_send(childfd, contents.as_mut_ptr(), contents.len(), 0)
-        .expect("cannot send");
+    let mut send_content = String::from("Hello World3");
+    let sent = wasi::sock_send(childfd, send_content.as_mut_ptr(), send_content.len(), 0)
+        .expect("cannot send content");
     println!("sent {} bytes", sent);
+
+    let recv_content = &mut [0u8; 64];
+    let recv = wasi::sock_recv(childfd, recv_content.as_mut_ptr(), recv_content.len(), 0)
+        .expect("cannot receive content");
+    println!("recv {} bytes", recv);
+    assert_eq!(send_content.as_bytes(), &recv_content[0..recv], "no equal payloads");
 
     wasi::sock_close(childfd)
         .expect("cannot shutdown child socket");
@@ -57,8 +64,16 @@ unsafe fn test_socket_tcp_server() {
 }
 
 fn main() {
-    // Run the tests.
+    let mut args = env::args();
+    let prog = args.next().unwrap();
+    let arg = if let Some(arg) = args.next() {
+        arg
+    } else {
+        eprintln!("usage: {} <server port>", prog);
+        process::exit(1);
+    };
+
     unsafe {
-        test_socket_tcp_server();
+        test_socket_tcp_server(arg.parse::<u16>().unwrap());
     }
 }

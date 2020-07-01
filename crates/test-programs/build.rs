@@ -168,6 +168,11 @@ mod wasi_tests {
             out,
             "        let bin_name = utils::extract_exec_name_from_path(path)?;"
         )?;
+        if requires_tcp_server(testsuite, stemstr ) {
+            writeln!(out, "        let echo_server = utils::tcp::EchoTcpServer::start()?;")?;
+        } else if requires_tcp_client(testsuite, stemstr ) {
+            writeln!(out, "        let echo_client = utils::tcp::EchoTcpClient::start()?;")?;
+        }
         let workspace = if no_preopens(testsuite, stemstr) {
             "None"
         } else {
@@ -182,15 +187,23 @@ mod wasi_tests {
                 PreopenType::Virtual => "Some(std::path::Path::new(&bin_name))",
             }
         };
+        if requires_tcp_server(testsuite, stemstr ) {
+            writeln!(out, "        let arg = echo_server.port().to_string();")?;
+        } else if requires_tcp_client(testsuite, stemstr ) {
+            writeln!(out, "        let arg = echo_client.port().to_string();")?;
+        } else {
+            writeln!(out, "        let arg = String::from(\".\");")?;
+        }
         writeln!(
             out,
-            "        runtime::instantiate(&data, &bin_name, {}, {})",
+            "        let result = runtime::instantiate(&data, &bin_name, &arg, {}, {});",
             workspace,
             match preopen_type {
                 PreopenType::OS => "PreopenType::OS",
                 PreopenType::Virtual => "PreopenType::Virtual",
             }
         )?;
+        writeln!(out, "        result")?;
         writeln!(out, "    }}")?;
         writeln!(out)?;
         Ok(())
@@ -276,6 +289,31 @@ mod wasi_tests {
                 "sock_bind" => true,
                 "sock_set_reuse_addr" => true,
                 "sock_set_reuse_port" => true,
+                _ => false,
+            }
+        } else {
+            unreachable!()
+        }
+    }
+
+    /// Mark tests which do require socket server
+    fn requires_tcp_server(testsuite: &str, name: &str) -> bool {
+        if testsuite == "wasi-tests" {
+            match name {
+                "socket_tcp_client" => true,
+                _ => false,
+            }
+        } else {
+            unreachable!()
+        }
+    }
+
+    /// Mark tests which do require socket client
+    fn requires_tcp_client(testsuite: &str, name: &str) -> bool {
+        if testsuite == "wasi-tests" {
+            match name {
+                //"socket_tcp_client" => true,
+                "socket_tcp_server" => true,
                 _ => false,
             }
         } else {

@@ -17,6 +17,7 @@ pub enum PreopenType {
 pub fn instantiate(
     data: &[u8],
     bin_name: &str,
+    arg: &str,
     workspace: Option<&Path>,
     preopen_type: PreopenType,
 ) -> anyhow::Result<()> {
@@ -26,7 +27,7 @@ pub fn instantiate(
     // Additionally register any preopened directories if we have them.
     let mut builder = wasi_common::WasiCtxBuilder::new();
 
-    builder.arg(bin_name).arg(".").inherit_stdio();
+    builder.arg(bin_name).arg(arg).inherit_stdio();
 
     if let Some(workspace) = workspace {
         match preopen_type {
@@ -44,7 +45,8 @@ pub fn instantiate(
     }
 
     // Add localhost address pools
-    builder.socket_addr(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080) );
+    let port = arg.parse::<u16>().unwrap_or(8080);
+    builder.socket_addr(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port) );
 
     // The nonstandard thing we do with `WasiCtxBuilder` is to ensure that
     // `stdin` is always an unreadable pipe. This is expected in the test suite

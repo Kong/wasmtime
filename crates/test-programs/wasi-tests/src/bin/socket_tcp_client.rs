@@ -1,4 +1,6 @@
-unsafe fn test_socket_tcp_client() {
+use std::{env, process};
+
+unsafe fn test_socket_tcp_client(port: u16) {
     let mut addr = wasi::Addr {
         tag: wasi::ADDR_TYPE_IP4,
         u: wasi::AddrU {
@@ -9,7 +11,7 @@ unsafe fn test_socket_tcp_client() {
                     h0: 0,
                     h1: 1,
                 },
-                port: 8080,
+                port,
             }
         },
     };
@@ -19,17 +21,30 @@ unsafe fn test_socket_tcp_client() {
     wasi::sock_connect(fd, &mut addr as *mut wasi::Addr)
         .expect("cannot connect to localhost");
 
-    let contents = &mut [0u8; 64];
-    wasi::sock_recv(fd, contents.as_mut_ptr(), contents.len(), wasi::RIFLAGS_RECV_WAITALL)
-        .expect("cannot receive content");
+    let mut send_content = String::from("Hello World");
+    let sent = wasi::sock_send(fd, send_content.as_mut_ptr(), send_content.len(), 0)
+        .expect("cannot send content");
 
-    wasi::sock_shutdown(fd, wasi::SDFLAGS_RD | wasi::SDFLAGS_WR)
-        .expect("cannot shutdown socket");
+    let recv_content = &mut [0u8; 64];
+    let recv = wasi::sock_recv(fd, recv_content.as_mut_ptr(), recv_content.len(), 0)
+        .expect("cannot receive content");
+    assert_eq!(send_content.as_bytes(), &recv_content[0..recv], "no equal payloads");
+
+    wasi::sock_close(fd)
+        .expect("cannot close socket");
 }
 
 fn main() {
-    // Run the tests.
+    let mut args = env::args();
+    let prog = args.next().unwrap();
+    let arg = if let Some(arg) = args.next() {
+        arg
+    } else {
+        eprintln!("usage: {} <server port>", prog);
+        process::exit(1);
+    };
+
     unsafe {
-        test_socket_tcp_client();
+        test_socket_tcp_client(arg.parse::<u16>().unwrap());
     }
 }

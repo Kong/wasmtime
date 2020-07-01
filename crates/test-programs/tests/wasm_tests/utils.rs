@@ -1,6 +1,8 @@
 use std::path::Path;
 use tempfile::{Builder, TempDir};
 
+pub mod tcp;
+
 pub fn prepare_workspace(exe_name: &str) -> anyhow::Result<TempDir> {
     let prefix = format!("wasi_common_{}", exe_name);
     let tempdir = Builder::new().prefix(&prefix).tempdir()?;
