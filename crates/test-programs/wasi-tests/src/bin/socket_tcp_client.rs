@@ -24,10 +24,12 @@ unsafe fn test_socket_tcp_client(port: u16) {
     let mut send_content = String::from("Hello World");
     let sent = wasi::sock_send(fd, send_content.as_mut_ptr(), send_content.len(), 0)
         .expect("cannot send content");
+    assert_eq!(sent, send_content.len(), "wrong number of bytes sent");
 
     let recv_content = &mut [0u8; 64];
     let recv = wasi::sock_recv(fd, recv_content.as_mut_ptr(), recv_content.len(), 0)
         .expect("cannot receive content");
+    assert_eq!(recv, send_content.len(), "wrong number of bytes received");
     assert_eq!(send_content.as_bytes(), &recv_content[0..recv], "no equal payloads");
 
     wasi::sock_close(fd)

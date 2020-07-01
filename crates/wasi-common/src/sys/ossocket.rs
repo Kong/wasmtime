@@ -134,4 +134,14 @@ impl Handle for OsSocket {
         let reuse = self.handle.get_reuse_port()?;
         Ok(reuse)
     }
+
+    fn sock_set_recv_buf_size(&self, size: types::Size) -> wasi::Result<()> {
+        self.handle.set_recv_buf_size(size)?;
+        Ok(())
+    }
+
+    fn sock_get_recv_buf_size(&self) -> wasi::Result<types::Size> {
+        let size = self.handle.get_recv_buf_size()?;
+        Ok(size)
+    }
 }

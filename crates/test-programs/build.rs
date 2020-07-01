@@ -289,6 +289,7 @@ mod wasi_tests {
                 "sock_bind" => true,
                 "sock_set_reuse_addr" => true,
                 "sock_set_reuse_port" => true,
+                "sock_set_recv_buf_size" => true,
                 _ => false,
             }
         } else {

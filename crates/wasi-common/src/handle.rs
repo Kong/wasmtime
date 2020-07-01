@@ -227,4 +227,6 @@ pub trait Handle {
     fn sock_get_reuse_addr(&self) -> Result<bool> { Err(Errno::Acces) }
     fn sock_set_reuse_port(&self, _reuse: bool) -> Result<()> { Err(Errno::Acces) }
     fn sock_get_reuse_port(&self) -> Result<bool> { Err(Errno::Acces) }
+    fn sock_set_recv_buf_size(&self, _size: types::Size) -> Result<()> { Err(Errno::Acces) }
+    fn sock_get_recv_buf_size(&self) -> Result<types::Size> { Err(Errno::Acces) }
 }

@@ -44,15 +44,15 @@ unsafe fn test_socket_tcp_server(port: u16) {
     let remote_addr = sock_addr_remote(childfd);
     println!("client connected {}", wasi_tests::PrintableAddr(remote_addr));
 
-    let mut send_content = String::from("Hello World3");
+    let mut send_content = String::from("Hello World");
     let sent = wasi::sock_send(childfd, send_content.as_mut_ptr(), send_content.len(), 0)
         .expect("cannot send content");
-    println!("sent {} bytes", sent);
+    assert_eq!(sent, send_content.len(), "wrong number of bytes sent");
 
     let recv_content = &mut [0u8; 64];
     let recv = wasi::sock_recv(childfd, recv_content.as_mut_ptr(), recv_content.len(), 0)
         .expect("cannot receive content");
-    println!("recv {} bytes", recv);
+    assert_eq!(recv, send_content.len(), "wrong number of bytes received");
     assert_eq!(send_content.as_bytes(), &recv_content[0..recv], "no equal payloads");
 
     wasi::sock_close(childfd)

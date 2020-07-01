@@ -275,4 +275,16 @@ impl RawOsSocket {
             yanix::socket::get_reuse_port(self.as_raw_fd())
         }
     }
+
+    pub(crate) fn set_recv_buf_size(&self, size: types::Size) -> io::Result<()> {
+        unsafe {
+            yanix::socket::set_recv_buf_size(self.as_raw_fd(), size)
+        }
+    }
+
+    pub(crate) fn get_recv_buf_size(&self) -> io::Result<types::Size> {
+        unsafe {
+            yanix::socket::get_recv_buf_size(self.as_raw_fd())
+        }
+    }
 }

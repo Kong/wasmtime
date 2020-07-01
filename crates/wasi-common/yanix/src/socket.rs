@@ -182,6 +182,19 @@ pub unsafe fn get_reuse_port(fd: RawFd) -> Result<bool> {
     Ok(reuse != 0)
 }
 
+pub unsafe fn set_recv_buf_size(fd: RawFd, buf_size: u32) -> Result<()> {
+    let buf_size = &(buf_size as libc::c_int) as *const libc::c_int as *const libc::c_void;
+    let size = std::mem::size_of::<libc::c_int>() as libc::socklen_t;
+    from_success_code( libc::setsockopt(fd, libc::SOL_SOCKET, libc::SO_RCVBUF, buf_size, size) )
+}
+
+pub unsafe fn get_recv_buf_size(fd: RawFd) -> Result<u32> {
+    let mut buf_size: libc::c_int = std::mem::zeroed();
+    let mut len = std::mem::size_of::<libc::c_int>() as libc::socklen_t;
+    from_success_code( libc::getsockopt(fd, libc::SOL_SOCKET, libc::SO_RCVBUF, &mut buf_size as *mut _ as *mut _, &mut len) )?;
+    Ok(buf_size as u32)
+}
+
 pub unsafe fn get_socket_type(fd: RawFd) -> Result<SockType> {
     use std::mem::MaybeUninit;
     let mut buffer = MaybeUninit::<SockType>::zeroed().assume_init();
