@@ -216,6 +216,8 @@ impl RightsExt for types::Rights {
             | Self::SOCK_RECV
             | Self::SOCK_ADDR_LOCAL
             | Self::SOCK_ADDR_REMOTE
+            | Self::SOCK_RECV_FROM
+            | Self::SOCK_SEND_TO
     }
 
     fn address_pool_inheriting() -> Self {

@@ -230,12 +230,24 @@ impl RawOsSocket {
         unsafe { yanix::socket::recv(self.as_raw_fd(), buf, yanix::socket::RecvFlags::from(flags) ) }
     }
 
+    pub(crate) fn recvfrom(&self, buf: &mut [u8], flags: types::Riflags) -> io::Result<(usize, types::Addr)> {
+        unsafe {
+            let (size, addr) = yanix::socket::recvfrom(self.as_raw_fd(), buf, yanix::socket::RecvFlags::from(flags))?;
+            Ok((size, types::Addr::try_from(&addr)?))
+        }
+    }
+
     pub(crate) fn shutdown(&self, how: types::Sdflags) -> io::Result<()> {
         unsafe { yanix::socket::shutdown(self.as_raw_fd(), yanix::socket::ShutdownMode::try_from(how)? ) }
     }
 
     pub(crate) fn send(&self, buf: &[u8], _flags: types::Siflags) -> io::Result<usize> {
         unsafe { yanix::socket::send(self.as_raw_fd(), buf, yanix::socket::SendFlags::empty() ) }
+    }
+
+    pub(crate) fn sendto(&self, buf: &[u8], addr: types::Addr, _flags: types::Siflags) -> io::Result<usize> {
+        let addr = yanix::socket::SockAddr::from(&addr);
+        unsafe { yanix::socket::sendto(self.as_raw_fd(), buf, &addr, yanix::socket::SendFlags::empty() ) }
     }
 
     pub(crate) fn addr_local(&self) -> io::Result<types::Addr> {

@@ -114,12 +114,39 @@ pub unsafe fn recv(fd: RawFd, buf: &mut [u8], flags: RecvFlags) -> Result<usize>
     Ok(bufused as usize)
 }
 
+pub unsafe fn recvfrom(fd: RawFd, buf: &mut [u8], flags: RecvFlags) -> Result<(usize, SockAddr)> {
+    let mut storage: libc::sockaddr_storage = std::mem::zeroed();
+    let mut len = std::mem::size_of_val(&storage) as libc::socklen_t;
+
+    let bufused = from_result(libc::recvfrom(
+        fd,
+        buf.as_mut_ptr() as *mut libc::c_void,
+        buf.len(),
+        flags.bits,
+        &mut storage as *mut _ as *mut _,
+        &mut len,
+    ))?;
+    Ok((bufused as usize, SockAddr { storage, len }))
+}
+
 pub unsafe fn send(fd: RawFd, buf: &[u8], flags: SendFlags) -> Result<usize> {
     let bufused = from_result(libc::send(
         fd,
         buf.as_ptr() as *const libc::c_void,
         buf.len(),
         flags.bits,
+    ))?;
+    Ok(bufused as usize)
+}
+
+pub unsafe fn sendto(fd: RawFd, buf: &[u8], addr: &SockAddr, flags: SendFlags) -> Result<usize> {
+    let bufused = from_result(libc::sendto(
+        fd,
+        buf.as_ptr() as *const libc::c_void,
+        buf.len(),
+        flags.bits,
+        addr.as_ptr(),
+        addr.len(),
     ))?;
     Ok(bufused as usize)
 }

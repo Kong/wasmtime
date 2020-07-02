@@ -1056,6 +1056,31 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         Ok(bufused)
     }
 
+    fn sock_recv_from(
+        &self,
+        fd: types::Fd,
+        buf: &GuestPtr<u8>,
+        buf_len: types::Size,
+        addr_buf: &GuestPtr<u8>,
+        addr_buf_len: types::Size,
+        flags: types::Riflags,
+    ) -> Result<types::Size> {
+        let addr_buf = addr_buf.cast::<types::Addr>().clone();
+        let addr_size = <types::Addr as GuestType>::guest_size();
+
+        if addr_buf_len < addr_size {
+            Err(Errno::Nomem)
+        } else {
+            let mut buf = buf.as_array(buf_len).as_slice()?;
+            let required_rights = HandleRights::from_base(types::Rights::SOCK_RECV_FROM);
+            let entry = self.get_entry(fd)?;
+            let handle = entry.as_handle(&required_rights)?;
+            let (bufused, addr) = handle.sock_recv_from(buf.as_mut(), flags)?;
+            addr_buf.write(addr)?;
+            Ok(bufused.try_into()?)
+        }
+    }
+
     fn sock_send(
         &self,
         fd: types::Fd,
@@ -1068,6 +1093,30 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         let entry = self.get_entry(fd)?;
         let handle = entry.as_handle(&required_rights)?;
         let bufused = handle.sock_send(buf.as_ref(), flags)?.try_into()?;
+        Ok(bufused)
+    }
+
+    fn sock_send_to(
+        &self,
+        fd: types::Fd,
+        buf: &GuestPtr<u8>,
+        buf_len: types::Size,
+        addr: &GuestPtr<types::Addr>,
+        flags: types::Siflags,
+    ) -> Result<types::Size> {
+        let addr = addr.read()?;
+        let buf = buf.as_array(buf_len).as_slice()?;
+        let required_rights = HandleRights::from_base(types::Rights::SOCK_SEND_TO );
+
+        let pool = self.get_addr_pool(&addr)?;
+        let pool_rights = pool.get_rights();
+
+        let entry = self.get_entry(fd)?;
+        // transfer pool rights into the socket
+        entry.set_rights(pool_rights);
+
+        let handle = entry.as_handle(&required_rights)?;
+        let bufused = handle.sock_send_to(buf.as_ref(), addr, flags)?.try_into()?;
         Ok(bufused)
     }
 

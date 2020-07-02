@@ -172,6 +172,8 @@ mod wasi_tests {
             writeln!(out, "        let echo_server = utils::tcp::EchoTcpServer::start()?;")?;
         } else if requires_tcp_client(testsuite, stemstr ) {
             writeln!(out, "        let echo_client = utils::tcp::EchoTcpClient::start()?;")?;
+        } else if requires_udp_socket(testsuite, stemstr ) {
+            writeln!(out, "        let udp_socket = utils::udp::EchoUdpSocket::start()?;")?;
         }
         let workspace = if no_preopens(testsuite, stemstr) {
             "None"
@@ -191,6 +193,8 @@ mod wasi_tests {
             writeln!(out, "        let arg = echo_server.port().to_string();")?;
         } else if requires_tcp_client(testsuite, stemstr ) {
             writeln!(out, "        let arg = echo_client.port().to_string();")?;
+        } else if requires_udp_socket(testsuite, stemstr ) {
+            writeln!(out, "        let arg = udp_socket.port().to_string();")?;
         } else {
             writeln!(out, "        let arg = String::from(\".\");")?;
         }
@@ -291,6 +295,8 @@ mod wasi_tests {
                 "sock_set_reuse_port" => true,
                 "sock_set_recv_buf_size" => true,
                 "sock_set_send_buf_size" => true,
+                "socket_udp" => true,
+                "sock_close" => true,
                 _ => false,
             }
         } else {
@@ -298,7 +304,7 @@ mod wasi_tests {
         }
     }
 
-    /// Mark tests which do require socket server
+    /// Mark tests which do require TCP socket server
     fn requires_tcp_server(testsuite: &str, name: &str) -> bool {
         if testsuite == "wasi-tests" {
             match name {
@@ -310,12 +316,25 @@ mod wasi_tests {
         }
     }
 
-    /// Mark tests which do require socket client
+    /// Mark tests which do require TCP socket client
     fn requires_tcp_client(testsuite: &str, name: &str) -> bool {
         if testsuite == "wasi-tests" {
             match name {
                 //"socket_tcp_client" => true,
                 "socket_tcp_server" => true,
+                _ => false,
+            }
+        } else {
+            unreachable!()
+        }
+    }
+
+    /// Mark tests which do require UDP socket
+    fn requires_udp_socket(testsuite: &str, name: &str) -> bool {
+        if testsuite == "wasi-tests" {
+            match name {
+                //"socket_tcp_client" => true,
+                "socket_udp" => true,
                 _ => false,
             }
         } else {

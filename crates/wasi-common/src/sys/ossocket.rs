@@ -100,8 +100,18 @@ impl Handle for OsSocket {
         Ok(size)
     }
 
+    fn sock_recv_from(&self, buf: &mut [u8], flags: types::Riflags) -> wasi::Result<(usize, types::Addr)> {
+        let (size, addr) = self.handle.recvfrom(buf, flags)?;
+        Ok((size, addr))
+    }
+
     fn sock_send(&self, buf: &[u8], flags: types::Siflags) -> wasi::Result<usize> {
         let size = self.handle.send(buf, flags)?;
+        Ok(size)
+    }
+
+    fn sock_send_to(&self, buf: &[u8], addr: types::Addr, flags: types::Siflags) -> wasi::Result<usize> {
+        let size = self.handle.sendto(buf, addr, flags)?;
         Ok(size)
     }
 
@@ -154,4 +164,6 @@ impl Handle for OsSocket {
         let size = self.handle.get_send_buf_size()?;
         Ok(size)
     }
+
+
 }

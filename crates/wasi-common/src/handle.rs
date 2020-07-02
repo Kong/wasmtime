@@ -220,7 +220,9 @@ pub trait Handle {
     fn sock_accept(&self) -> Result<Box<dyn Handle>> { Err(Errno::Acces) }
     fn sock_shutdown(&self, _how: types::Sdflags) -> Result<()> { Err(Errno::Acces) }
     fn sock_recv(&self, _buf: &mut [u8], _flags: types::Riflags) -> Result<usize> { Err(Errno::Acces) }
+    fn sock_recv_from(&self, _buf: &mut [u8], _flags: types::Riflags) -> Result<(usize, types::Addr)> { Err(Errno::Acces) }
     fn sock_send(&self, _buf: &[u8], _flags: types::Siflags) -> Result<usize> { Err(Errno::Acces) }
+    fn sock_send_to(&self, _buf: &[u8], _addr: types::Addr, _flags: types::Siflags) -> Result<usize> { Err(Errno::Acces) }
     fn sock_addr_local(&self) -> Result<types::Addr> { Err(Errno::Acces) }
     fn sock_addr_remote(&self) -> Result<types::Addr> { Err(Errno::Acces) }
     fn sock_set_reuse_addr(&self, _reuse: bool) -> Result<()> { Err(Errno::Acces) }
