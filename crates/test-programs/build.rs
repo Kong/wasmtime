@@ -297,6 +297,7 @@ mod wasi_tests {
                 "sock_udp" => true,
                 "sock_close" => true,
                 "sock_connect" => true,
+                "sock_send_to" => true,
                 _ => false,
             }
         } else {
