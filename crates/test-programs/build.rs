@@ -298,6 +298,7 @@ mod wasi_tests {
                 "sock_close" => true,
                 "sock_connect" => true,
                 "sock_send_to" => true,
+                "sock_open" => true,
                 _ => false,
             }
         } else {

@@ -1,6 +1,6 @@
 use more_asserts::assert_ge;
 use std::{cmp::min, mem, slice, str};
-use wasi_tests::STDPOOL_FD;
+use wasi_tests::{STDPOOL_FD, STDIN_FD};
 
 const BUF_LEN: usize = 256;
 
@@ -86,10 +86,36 @@ unsafe fn test_addr_resolve_no_overflow() {
     assert_eq!(bufused, 0, "most likely we overflowed the buffer");
 }
 
+unsafe fn test_addr_resolve_badf() {
+    let mut buf: [u8; SMALL_BUF_LEN] = [0; SMALL_BUF_LEN];
+
+    assert_eq!(
+        wasi::addr_resolve(9, "localhost", 0, buf.as_mut_ptr(), SMALL_BUF_LEN)
+            .expect_err("bad file descriptor")
+            .raw_error(),
+        wasi::ERRNO_BADF,
+        "errno should be ERRNO_BADF",
+    );
+}
+
+unsafe fn test_addr_resolve_notpool() {
+    let mut buf: [u8; SMALL_BUF_LEN] = [0; SMALL_BUF_LEN];
+
+    assert_eq!(
+        wasi::addr_resolve(STDIN_FD, "localhost", 0, buf.as_mut_ptr(), SMALL_BUF_LEN)
+            .expect_err("invalid file descriptor")
+            .raw_error(),
+        wasi::ERRNO_INVAL,
+        "errno should be ERRNO_INVAL",
+    );
+}
+
 fn main() {
     // Run the tests.
     unsafe {
         test_addr_resolve();
         test_addr_resolve_no_overflow();
+        test_addr_resolve_badf();
+        test_addr_resolve_notpool();
     }
 }

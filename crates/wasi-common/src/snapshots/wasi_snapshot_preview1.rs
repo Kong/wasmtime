@@ -827,19 +827,23 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         let host = host.as_str()?;
         let size = <types::Addr as GuestType>::guest_size();
         let mut bufused = 0;
-        let entry = self.get_entry(addr_pool_fd)?;
-        let handle = entry.as_handle( &HandleRights::empty() )?;
-        let result = handle.addr_pool_resolve(host.as_ref(), port )?;
-        for addr in result {
-            if (buf_len - bufused) < size {
-                break;
-            }
+        let addr_pool_entry = self.get_entry(addr_pool_fd)?;
+        if addr_pool_entry.get_file_type() != types::Filetype::AddressPool {
+            Err( Errno::Inval )
+        } else {
+            let handle = addr_pool_entry.as_handle(&HandleRights::empty())?;
+            let result = handle.addr_pool_resolve(host.as_ref(), port)?;
+            for addr in result {
+                if (buf_len - bufused) < size {
+                    break;
+                }
 
-            buf.write(addr)?;
-            buf = buf.add(1)?;
-            bufused += size;
+                buf.write(addr)?;
+                buf = buf.add(1)?;
+                bufused += size;
+            }
+            Ok(bufused.try_into().unwrap())
         }
-        Ok(bufused.try_into().unwrap())
     }
 
     fn sock_addr_local(
