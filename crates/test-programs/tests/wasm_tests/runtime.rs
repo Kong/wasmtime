@@ -44,10 +44,6 @@ pub fn instantiate(
         }
     }
 
-    // Add localhost address pools
-    let port = arg.parse::<u16>().unwrap_or(8080);
-    builder.socket_addr(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port) );
-
     // The nonstandard thing we do with `WasiCtxBuilder` is to ensure that
     // `stdin` is always an unreadable pipe. This is expected in the test suite
     // where `stdin` is never ready to be read. In some CI systems, however,
@@ -56,7 +52,13 @@ pub fn instantiate(
     let file = reader_to_file(reader);
     let handle = OsOther::try_from(file).context("failed to create OsOther from PipeReader")?;
     builder.stdin(handle);
-    let snapshot1 = wasmtime_wasi::Wasi::new(&store, builder.build()?);
+
+    // Add localhost address pools
+    let port = arg.parse::<u16>().unwrap_or(8080);
+    builder.addr_pool_fixed(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port) );
+
+    let ctx = builder.build()?;
+    let snapshot1 = wasmtime_wasi::Wasi::new(&store, ctx);
 
     let mut linker = Linker::new(&store);
 

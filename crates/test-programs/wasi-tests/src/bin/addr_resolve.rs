@@ -1,5 +1,6 @@
 use more_asserts::assert_ge;
 use std::{cmp::min, mem, slice, str};
+use wasi_tests::STDPOOL_FD;
 
 const BUF_LEN: usize = 256;
 
@@ -39,7 +40,7 @@ impl<'a> Iterator for Addrs<'a> {
 unsafe fn exec_addr_resolve(host: &str, port: u16) -> Vec<wasi::Addr> {
     let mut buf: [u8; BUF_LEN] = [0; BUF_LEN];
     let bufused =
-        wasi::addr_resolve(host, port, buf.as_mut_ptr(), BUF_LEN).expect("failed addr_resolve");
+        wasi::addr_resolve(STDPOOL_FD, host, port, buf.as_mut_ptr(), BUF_LEN).expect("failed addr_resolve");
 
     let sl = slice::from_raw_parts(buf.as_ptr(), min(BUF_LEN, bufused));
     let addresses: Vec<_> = Addrs::from_slice(sl).collect();
@@ -81,7 +82,7 @@ unsafe fn test_addr_resolve() {
 unsafe fn test_addr_resolve_no_overflow() {
     let mut buf: [u8; SMALL_BUF_LEN] = [0; SMALL_BUF_LEN];
     let bufused =
-        wasi::addr_resolve("localhost", 0, buf.as_mut_ptr(), SMALL_BUF_LEN).expect("failed addr_resolve");
+        wasi::addr_resolve(STDPOOL_FD, "localhost", 0, buf.as_mut_ptr(), SMALL_BUF_LEN).expect("failed addr_resolve");
     assert_eq!(bufused, 0, "most likely we overflowed the buffer");
 }
 

@@ -222,7 +222,7 @@ pub trait Handle {
     fn sock_recv(&self, _buf: &mut [u8], _flags: types::Riflags) -> Result<usize> { Err(Errno::Acces) }
     fn sock_recv_from(&self, _buf: &mut [u8], _flags: types::Riflags) -> Result<(usize, types::Addr)> { Err(Errno::Acces) }
     fn sock_send(&self, _buf: &[u8], _flags: types::Siflags) -> Result<usize> { Err(Errno::Acces) }
-    fn sock_send_to(&self, _buf: &[u8], _addr: types::Addr, _flags: types::Siflags) -> Result<usize> { Err(Errno::Acces) }
+    fn sock_send_to(&self, _buf: &[u8], _addr: &types::Addr, _flags: types::Siflags) -> Result<usize> { Err(Errno::Acces) }
     fn sock_addr_local(&self) -> Result<types::Addr> { Err(Errno::Acces) }
     fn sock_addr_remote(&self) -> Result<types::Addr> { Err(Errno::Acces) }
     fn sock_set_reuse_addr(&self, _reuse: bool) -> Result<()> { Err(Errno::Acces) }
@@ -233,4 +233,6 @@ pub trait Handle {
     fn sock_get_recv_buf_size(&self) -> Result<types::Size> { Err(Errno::Acces) }
     fn sock_set_send_buf_size(&self, _size: types::Size) -> Result<()> { Err(Errno::Acces) }
     fn sock_get_send_buf_size(&self) -> Result<types::Size> { Err(Errno::Acces) }
+    fn addr_pool_contains(&self, _addr: &types::Addr) -> Result<bool> { Err(Errno::Acces) }
+    fn addr_pool_resolve(&self, _host: &str, _port: u16) -> Result<Vec<types::Addr>> { Err(Errno::Acces) }
 }

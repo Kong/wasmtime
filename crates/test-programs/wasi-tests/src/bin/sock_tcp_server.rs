@@ -1,6 +1,5 @@
 use std::{env, process};
-use wasi_tests::sock_addr_local;
-use wasi_tests::sock_addr_remote;
+use wasi_tests::{sock_addr_local, sock_addr_remote, STDPOOL_FD};
 
 unsafe fn test_socket_tcp_server(port: u16) {
     let mut addr = wasi::Addr {
@@ -18,7 +17,7 @@ unsafe fn test_socket_tcp_server(port: u16) {
         },
     };
 
-    let fd = wasi::sock_open(wasi::ADDRESS_FAMILY_INET4, wasi::SOCK_TYPE_SOCKET_STREAM)
+    let fd = wasi::sock_open(STDPOOL_FD, wasi::ADDRESS_FAMILY_INET4, wasi::SOCK_TYPE_SOCKET_STREAM)
         .expect("cannot open socket");
     wasi::sock_bind(fd, &mut addr as *mut wasi::Addr)
         .expect("cannot bind socket");

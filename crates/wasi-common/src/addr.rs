@@ -2,13 +2,15 @@ use std::cell::Cell;
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6, ToSocketAddrs, Ipv4Addr, Ipv6Addr};
 use std::ops::Range;
 use std::vec;
+use std::any::Any;
+use std::io;
 
 use ipnet::IpNet;
 
 use crate::handle::HandleRights;
 use crate::wasi::Result;
 use crate::wasi::{types, RightsExt};
-use std::rc::Rc;
+use crate::Handle;
 
 impl From<SocketAddrV6> for types::AddrIp6Port {
     fn from(addr: SocketAddrV6) -> Self {
@@ -78,56 +80,6 @@ impl From<&types::Addr> for SocketAddr {
     }
 }
 
-pub(crate) struct AddressPoolTable {
-    pools: Vec<Rc<Box<dyn AddressPool>>>
-}
-
-impl AddressPoolTable {
-    pub(crate) fn new() -> AddressPoolTable {
-        AddressPoolTable {
-            pools: vec![]
-        }
-    }
-
-    pub(crate) fn insert(&mut self, pool: Box<dyn AddressPool>) -> &mut Self {
-        self.pools.push(Rc::new(pool));
-        self
-    }
-
-    pub(crate) fn get_pool(&self, addr: &types::Addr) -> Option<Rc<Box<dyn AddressPool>>> {
-        let addr = SocketAddr::from(addr);
-        for pool in &self.pools {
-            if pool.contains(&addr ) {
-                return Some(pool.clone());
-            }
-        }
-        None
-    }
-
-    pub(crate) fn resolve(&self, host: &str, port: u16) -> Result<Vec<types::Addr>> {
-        let addresses = (host, port).to_socket_addrs()?;
-        let filtered = addresses.into_iter().filter(|addr| {
-            for pool in &self.pools {
-                if pool.contains(addr) {
-                    return true;
-                }
-            }
-            false
-        });
-        let v = filtered
-            .map(|addr| types::Addr::from(addr))
-            .collect();
-        Ok(v)
-    }
-}
-
-pub(crate) trait AddressPool {
-    fn get_rights(&self) -> HandleRights {
-        HandleRights::empty()
-    }
-    fn contains(&self, _addr: &SocketAddr) -> bool { false }
-}
-
 pub(crate) struct FixedAddressPool {
     rights: Cell<HandleRights>,
     addrs: Vec<SocketAddr>,
@@ -147,26 +99,98 @@ impl FixedAddressPool {
     }
 }
 
+fn addr_pool_resolve(pool: &dyn Handle, host: &str, port: u16) -> Result<Vec<types::Addr>> {
+    let addresses = (host, port).to_socket_addrs()?;
+    let v = addresses.into_iter()
+        .map(|addr| types::Addr::from(addr))
+        .filter(|addr| {
+            pool.addr_pool_contains(addr).unwrap_or(false)
+        })
+        .collect();
+    Ok(v)
+}
+
+impl Handle for FixedAddressPool {
+    fn as_any(&self) -> &dyn Any { self }
+
+    fn try_clone(&self) -> io::Result<Box<dyn Handle>> {
+        let addrs = self.addrs.clone();
+        let rights = self.rights.clone();
+        Ok(Box::new(Self {
+            rights,
+            addrs
+        }))
+    }
+
+
+
+    fn get_file_type(&self) -> types::Filetype {
+        types::Filetype::AddressPool
+    }
+
+    fn get_rights(&self) -> HandleRights {
+        self.rights.get()
+    }
+
+    fn set_rights(&self, new_rights: HandleRights) {
+        self.rights.set(new_rights)
+    }
+
+    fn is_directory(&self) -> bool { false }
+
+    fn is_tty(&self) -> bool { false }
+
+    fn fdstat_get(&self) -> Result<types::Fdflags> { Err(types::Errno::Badf) }
+
+
+    fn addr_pool_contains(&self, addr: &types::Addr) -> Result<bool> {
+        let addr = SocketAddr::from(addr);
+        Ok(self.addrs.contains(&addr))
+    }
+
+    fn addr_pool_resolve(&self, host: &str, port: u16) -> Result<Vec<types::Addr>> {
+        addr_pool_resolve(self, host, port)
+    }
+}
+
 struct RangedAddressPool {
     rights: Cell<HandleRights>,
     cidr: IpNet,
     ports: Range<u16>,
 }
 
-impl AddressPool for FixedAddressPool {
-    fn get_rights(&self) -> HandleRights {
-        self.rights.get()
-    }
-    fn contains(&self, addr: &SocketAddr) -> bool {
-        self.addrs.contains(addr)
-    }
-}
+impl Handle for RangedAddressPool {
+    fn as_any(&self) -> &dyn Any { self }
 
-impl AddressPool for RangedAddressPool {
+    fn try_clone(&self) -> io::Result<Box<dyn Handle>> {
+        let cidr = self.cidr.clone();
+        let ports = self.ports.clone();
+        let rights = self.rights.clone();
+        Ok(Box::new(Self {
+            rights,
+            cidr,
+            ports
+        }))
+    }
+
+    fn get_file_type(&self) -> types::Filetype {
+        types::Filetype::AddressPool
+    }
+
     fn get_rights(&self) -> HandleRights {
         self.rights.get()
     }
-    fn contains(&self, addr: &SocketAddr) -> bool {
-        self.cidr.contains(&addr.ip()) && self.ports.contains(&addr.port())
+
+    fn set_rights(&self, new_rights: HandleRights) {
+        self.rights.set(new_rights)
+    }
+
+    fn addr_pool_contains(&self, addr: &types::Addr) -> Result<bool> {
+        let addr = SocketAddr::from(addr);
+        Ok(self.cidr.contains(&addr.ip()) && self.ports.contains(&addr.port()))
+    }
+
+    fn addr_pool_resolve(&self, host: &str, port: u16) -> Result<Vec<types::Addr>> {
+        addr_pool_resolve(self, host, port)
     }
 }

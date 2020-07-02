@@ -1,3 +1,4 @@
+use wasi_tests::STDPOOL_FD;
 use std::{env, process};
 
 unsafe fn test_socket_udp_client(port: u16) {
@@ -16,7 +17,7 @@ unsafe fn test_socket_udp_client(port: u16) {
         },
     };
 
-    let fd = wasi::sock_open(wasi::ADDRESS_FAMILY_INET4, wasi::SOCK_TYPE_SOCKET_DGRAM)
+    let fd = wasi::sock_open(STDPOOL_FD, wasi::ADDRESS_FAMILY_INET4, wasi::SOCK_TYPE_SOCKET_DGRAM)
         .expect("cannot open socket");
 
     let mut send_content = String::from("Hello World");

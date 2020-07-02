@@ -1,6 +1,6 @@
 use wasi_tests::{sock_addr_local, STDPOOL_FD};
 
-unsafe fn test_sock_close() {
+unsafe fn test_sock_connect_not_capable() {
     let mut addr = wasi::Addr {
         tag: wasi::ADDR_TYPE_IP4,
         u: wasi::AddrU {
@@ -11,28 +11,29 @@ unsafe fn test_sock_close() {
                     h0: 0,
                     h1: 1,
                 },
-                port: 8080,
+                port: 9090,
             }
         },
     };
 
-    let fd = wasi::sock_open(wasi_tests::STDPOOL_FD, wasi::ADDRESS_FAMILY_INET4, wasi::SOCK_TYPE_SOCKET_STREAM)
+    let fd = wasi::sock_open(STDPOOL_FD, wasi::ADDRESS_FAMILY_INET4, wasi::SOCK_TYPE_SOCKET_STREAM)
         .expect("cannot open socket");
-    wasi::sock_close(fd)
-        .expect("cannot close socket");
 
     assert_eq!(
-        wasi::sock_set_reuse_addr(fd, 1)
-            .expect_err("bad file descriptor")
+        wasi::sock_connect(fd, &mut addr as *mut wasi::Addr)
+            .expect_err("cannot bind socket")
             .raw_error(),
-        wasi::ERRNO_BADF,
-        "errno should be ERRNO_BADF",
+        wasi::ERRNO_NOTCAPABLE,
+        "errno should be ERRNO_NOTCAPABLE",
     );
+
+    wasi::sock_close(fd)
+        .expect("cannot close socket");
 }
 
 fn main() {
     // Run the tests.
     unsafe {
-        test_sock_close();
+        test_sock_connect_not_capable();
     }
 }

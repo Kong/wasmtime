@@ -15,21 +15,22 @@ impl From<types::SockType> for types::Filetype {
     }
 }
 
-#[derive(Debug)]
 pub(crate) struct OsSocket {
     socket_type: types::SockType,
     rights: Cell<HandleRights>,
     handle: RawOsSocket,
+    addr_pool: Option<Box<dyn Handle>>
 }
 
 impl OsSocket {
-    pub(crate) fn new(address_family: types::AddressFamily, socket_type: types::SockType) -> io::Result<Self> {
+    pub(crate) fn new(address_family: types::AddressFamily, socket_type: types::SockType, addr_pool: Box<dyn Handle>) -> io::Result<Self> {
         let raw_socket = RawOsSocket::new(address_family, socket_type)?;
         let rights = Cell::new( HandleRights::from_base( types::Rights::empty() ) );
         Ok(Self {
             socket_type,
             rights,
-            handle: raw_socket
+            handle: raw_socket,
+            addr_pool: Some(addr_pool)
         })
     }
 }
@@ -43,10 +44,12 @@ impl Handle for OsSocket {
         let socket_type = self.socket_type;
         let handle = self.handle.try_clone()?;
         let rights = self.rights.clone();
+        let addr_pool = if self.addr_pool.is_some() { Some(self.addr_pool.as_ref().unwrap().try_clone()?) } else { None };
         Ok(Box::new(Self {
             socket_type,
             rights,
             handle,
+            addr_pool
         }))
     }
 
@@ -65,13 +68,21 @@ impl Handle for OsSocket {
     }
 
     fn sock_connect(&self, addr: &types::Addr) -> wasi::Result<()> {
-        self.handle.connect(addr)?;
-        Ok(())
+        if !(self.addr_pool.is_some() && self.addr_pool.as_ref().unwrap().addr_pool_contains(addr)?) {
+            Err(types::Errno::Notcapable)
+        } else {
+            self.handle.connect(addr)?;
+            Ok(())
+        }
     }
 
     fn sock_bind(&self, addr: &types::Addr) -> wasi::Result<()> {
-        self.handle.bind(addr)?;
-        Ok(())
+        if !(self.addr_pool.is_some() && self.addr_pool.as_ref().unwrap().addr_pool_contains(addr)?) {
+            Err(types::Errno::Notcapable)
+        } else {
+            self.handle.bind(addr)?;
+            Ok(())
+        }
     }
 
     fn sock_listen(&self, backlog: u32) -> wasi::Result<()> {
@@ -85,7 +96,8 @@ impl Handle for OsSocket {
         let socket = OsSocket {
             socket_type: self.socket_type,
             rights,
-            handle: raw_socket
+            handle: raw_socket,
+            addr_pool: None
         };
         Ok(socket.try_clone()?)
     }
@@ -110,9 +122,13 @@ impl Handle for OsSocket {
         Ok(size)
     }
 
-    fn sock_send_to(&self, buf: &[u8], addr: types::Addr, flags: types::Siflags) -> wasi::Result<usize> {
-        let size = self.handle.sendto(buf, addr, flags)?;
-        Ok(size)
+    fn sock_send_to(&self, buf: &[u8], addr: &types::Addr, flags: types::Siflags) -> wasi::Result<usize> {
+        if !(self.addr_pool.is_some() && self.addr_pool.as_ref().unwrap().addr_pool_contains(addr)?) {
+            Err(types::Errno::Notcapable)
+        } else {
+            let size = self.handle.sendto(buf, addr, flags)?;
+            Ok(size)
+        }
     }
 
     fn sock_addr_local(&self) -> wasi::Result<types::Addr> {

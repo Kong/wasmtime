@@ -49,7 +49,7 @@ impl Entry {
         let preopen_path = None;
         Self {
             handle,
-            preopen_path,
+            preopen_path
         }
     }
 

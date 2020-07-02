@@ -1,7 +1,9 @@
+use wasi_tests::STDPOOL_FD;
+
 const BUF_LEN: usize = 8192;
 
 unsafe fn test_socket_recv_buf_size() {
-    let fd = wasi::sock_open(wasi::ADDRESS_FAMILY_INET4, wasi::SOCK_TYPE_SOCKET_STREAM)
+    let fd = wasi::sock_open(STDPOOL_FD, wasi::ADDRESS_FAMILY_INET4, wasi::SOCK_TYPE_SOCKET_STREAM)
         .expect("cannot open socket");
     wasi::sock_set_recv_buf_size(fd, BUF_LEN)
         .expect("cannot set recv buf size");

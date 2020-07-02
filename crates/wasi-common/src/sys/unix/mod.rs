@@ -114,6 +114,10 @@ pub(super) fn get_rights(file: &File, file_type: &types::Filetype) -> io::Result
             types::Rights::regular_file_base(),
             types::Rights::regular_file_inheriting(),
         ),
+        types::Filetype::AddressPool => (
+            types::Rights::address_pool_base(),
+            types::Rights::address_pool_inheriting(),
+        ),
     };
     let mut rights = HandleRights::new(base, inheriting);
     let flags = unsafe { fcntl::get_status_flags(file.as_raw_fd())? };

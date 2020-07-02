@@ -245,8 +245,8 @@ impl RawOsSocket {
         unsafe { yanix::socket::send(self.as_raw_fd(), buf, yanix::socket::SendFlags::empty() ) }
     }
 
-    pub(crate) fn sendto(&self, buf: &[u8], addr: types::Addr, _flags: types::Siflags) -> io::Result<usize> {
-        let addr = yanix::socket::SockAddr::from(&addr);
+    pub(crate) fn sendto(&self, buf: &[u8], addr: &types::Addr, _flags: types::Siflags) -> io::Result<usize> {
+        let addr = yanix::socket::SockAddr::from(addr);
         unsafe { yanix::socket::sendto(self.as_raw_fd(), buf, &addr, yanix::socket::SendFlags::empty() ) }
     }
 

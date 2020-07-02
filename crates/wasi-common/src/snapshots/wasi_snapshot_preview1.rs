@@ -230,6 +230,12 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
     fn fd_prestat_get(&self, fd: types::Fd) -> Result<types::Prestat> {
         // TODO: should we validate any rights here?
         let entry = self.get_entry(fd)?;
+
+        // we need to do this to break the loop on __wasilibc_populate_preopens
+        if entry.get_file_type() == types::Filetype::AddressPool {
+            return Err(Errno::Badf);
+        }
+
         let po_path = entry.preopen_path.as_ref().ok_or(Errno::Notsup)?;
         if entry.get_file_type() != types::Filetype::Directory {
             return Err(Errno::Notdir);
@@ -811,6 +817,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
 
     fn addr_resolve(
         &self,
+        addr_pool_fd: types::Fd,
         host: &GuestPtr<'_, str>,
         port: types::IpPort,
         buf: &GuestPtr<u8>,
@@ -820,7 +827,9 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         let host = host.as_str()?;
         let size = <types::Addr as GuestType>::guest_size();
         let mut bufused = 0;
-        let result = self.addr_resolve(host.as_ref(), port )?;
+        let entry = self.get_entry(addr_pool_fd)?;
+        let handle = entry.as_handle( &HandleRights::empty() )?;
+        let result = handle.addr_pool_resolve(host.as_ref(), port )?;
         for addr in result {
             if (buf_len - bufused) < size {
                 break;
@@ -881,12 +890,23 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
 
     fn sock_open(
         &self,
+        address_pool: types::Fd,
         address_family: types::AddressFamily,
         socket_type: types::SockType,
     ) -> Result<types::Fd> {
-        let handle = OsSocket::new(address_family, socket_type)?;
-        let entry = Entry::new(EntryHandle::new(handle));
-        self.insert_entry(entry)
+        let addr_pool_entry = self.get_entry(address_pool)?;
+        if addr_pool_entry.get_file_type() != types::Filetype::AddressPool {
+            Err( Errno::Inval )
+        } else {
+            let addr_pool_handle = addr_pool_entry.as_handle(&HandleRights::empty() )?;
+            let handle = OsSocket::new(address_family, socket_type, addr_pool_handle.try_clone()?)?;
+            let entry = Entry::new(EntryHandle::new(handle));
+            let addr_pool_rights = addr_pool_entry.get_rights();
+
+            // transfer pool rights into the socket
+            entry.set_rights(addr_pool_rights);
+            self.insert_entry(entry)
+        }
     }
 
     fn sock_close(&self, fd: types::Fd) -> Result<()> {
@@ -988,13 +1008,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
     ) -> Result<()> {
         let addr = addr.read()?;
         let required_rights = HandleRights::from_base(types::Rights::SOCK_CONNECT );
-        let pool = self.get_addr_pool(&addr)?;
-        let pool_rights = pool.get_rights();
         let entry = self.get_entry(fd)?;
-
-        // transfer pool rights into the socket
-        entry.set_rights(pool_rights);
-
         let handle = entry.as_handle(&required_rights)?;
         handle.sock_connect(&addr)
     }
@@ -1006,13 +1020,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
     ) -> Result<()> {
         let addr = addr.read()?;
         let required_rights = HandleRights::from_base(types::Rights::SOCK_BIND );
-        let pool = self.get_addr_pool(&addr)?;
-        let pool_rights = pool.get_rights();
         let entry = self.get_entry(fd)?;
-
-        // transfer pool rights into the socket
-        entry.set_rights(pool_rights);
-
         let handle = entry.as_handle(&required_rights)?;
         handle.sock_bind(&addr)
     }
@@ -1107,16 +1115,9 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         let addr = addr.read()?;
         let buf = buf.as_array(buf_len).as_slice()?;
         let required_rights = HandleRights::from_base(types::Rights::SOCK_SEND_TO );
-
-        let pool = self.get_addr_pool(&addr)?;
-        let pool_rights = pool.get_rights();
-
         let entry = self.get_entry(fd)?;
-        // transfer pool rights into the socket
-        entry.set_rights(pool_rights);
-
         let handle = entry.as_handle(&required_rights)?;
-        let bufused = handle.sock_send_to(buf.as_ref(), addr, flags)?.try_into()?;
+        let bufused = handle.sock_send_to(buf.as_ref(), &addr, flags)?.try_into()?;
         Ok(bufused)
     }
 

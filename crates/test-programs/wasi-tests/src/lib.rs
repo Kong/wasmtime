@@ -7,6 +7,7 @@ const BUF_LEN: usize = 20;
 pub const STDIN_FD: wasi::Fd = 0x0;
 pub const STDOUT_FD: wasi::Fd = 0x1;
 pub const STDERR_FD: wasi::Fd = 0x2;
+pub const STDPOOL_FD: wasi::Fd = 0x3;
 
 /// Opens a fresh file descriptor for `path` where `path` should be a preopened
 /// directory.

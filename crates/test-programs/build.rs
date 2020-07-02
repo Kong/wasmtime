@@ -200,14 +200,13 @@ mod wasi_tests {
         }
         writeln!(
             out,
-            "        let result = runtime::instantiate(&data, &bin_name, &arg, {}, {});",
+            "        runtime::instantiate(&data, &bin_name, &arg, {}, {})",
             workspace,
             match preopen_type {
                 PreopenType::OS => "PreopenType::OS",
                 PreopenType::Virtual => "PreopenType::Virtual",
             }
         )?;
-        writeln!(out, "        result")?;
         writeln!(out, "    }}")?;
         writeln!(out)?;
         Ok(())
@@ -297,6 +296,7 @@ mod wasi_tests {
                 "sock_send_buf_size" => true,
                 "sock_udp" => true,
                 "sock_close" => true,
+                "sock_connect" => true,
                 _ => false,
             }
         } else {

@@ -7,7 +7,7 @@ use crate::sys::stdio::{Stderr, StderrExt, Stdin, StdinExt, Stdout, StdoutExt};
 use crate::virtfs::{VirtualDir, VirtualDirEntry};
 use crate::wasi::types;
 use crate::wasi::{Errno, Result};
-use crate::addr::{AddressPoolTable, FixedAddressPool, AddressPool};
+use crate::addr::FixedAddressPool;
 use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -63,11 +63,6 @@ impl std::fmt::Debug for PendingEntry {
             Self::Handle(handle) => write!(fmt, "PendingEntry::Handle({:p})", handle),
         }
     }
-}
-
-#[derive(Debug, Eq, Hash, PartialEq)]
-enum PendingAddressPool {
-    OsSocketAddr(SocketAddr)
 }
 
 #[derive(Debug, Eq, Hash, PartialEq)]
@@ -138,7 +133,7 @@ pub struct WasiCtxBuilder {
     preopens: Option<Vec<(PathBuf, PendingPreopen)>>,
     args: Option<Vec<PendingCString>>,
     env: Option<HashMap<PendingCString, PendingCString>>,
-    addresses: Option<Vec<PendingAddressPool>>
+    addresses: Option<Vec<PendingEntry>>
 }
 
 impl WasiCtxBuilder {
@@ -274,13 +269,14 @@ impl WasiCtxBuilder {
         self
     }
 
-    /// Add a `SocketAddr` to an address pool
-    pub fn socket_addr(&mut self, addr: SocketAddr) -> &mut Self {
-        let pool = PendingAddressPool::OsSocketAddr(addr);
+    /// Add address pool for the specified socket addr
+    pub fn addr_pool_fixed(&mut self, addr: SocketAddr) -> &mut Self {
+        let pool = FixedAddressPool::new(addr);
+        let entry = PendingEntry::Handle(pool.try_clone().unwrap());
         self.addresses
             .as_mut()
             .unwrap()
-            .push(pool);
+            .push(entry);
         self
     }
 
@@ -397,6 +393,7 @@ impl WasiCtxBuilder {
             };
             log::debug!("WasiCtx inserted at {:?}", fd);
         }
+
         // Then add the preopen entries.
         for (guest_path, preopen) in self.preopens.take().unwrap() {
             let handle = EntryHandle::from(preopen.into()?);
@@ -408,20 +405,31 @@ impl WasiCtxBuilder {
             log::debug!("WasiCtx inserted at {:?}", fd);
         }
 
-        let mut address_pools = AddressPoolTable::new();
-        for pool in self.addresses.take().unwrap() {
-            match pool {
-                PendingAddressPool::OsSocketAddr(addr) => {
-                    address_pools.insert(Box::new(FixedAddressPool::new(addr.clone())) );
+        for pool in self.addresses.take().unwrap().into_iter() {
+            log::debug!("WasiCtx inserting entry {:?}", pool);
+            let fd = match pool {
+                PendingEntry::Thunk(f) => {
+                    let handle = EntryHandle::from(f()?);
+                    let entry = Entry::new(handle);
+                    entries
+                        .insert(entry)
+                        .ok_or(WasiCtxBuilderError::TooManyFilesOpen)?
                 }
-            }
+                PendingEntry::Handle(handle) => {
+                    let handle = EntryHandle::from(handle);
+                    let entry = Entry::new(handle);
+                    entries
+                        .insert(entry)
+                        .ok_or(WasiCtxBuilderError::TooManyFilesOpen)?
+                }
+            };
+            log::debug!("WasiCtx inserted at {:?}", fd);
         }
 
         Ok(WasiCtx {
             args,
             env,
-            entries: RefCell::new(entries),
-            address_pools: RefCell::new( address_pools )
+            entries: RefCell::new(entries)
         })
     }
 }
@@ -466,7 +474,6 @@ impl EntryTable {
 
 pub struct WasiCtx {
     entries: RefCell<EntryTable>,
-    address_pools: RefCell<AddressPoolTable>,
     pub(crate) args: Vec<CString>,
     pub(crate) env: Vec<CString>,
 }
@@ -517,19 +524,5 @@ impl WasiCtx {
     /// Remove `Entry` corresponding to the specified raw WASI `fd` from the `WasiCtx` object.
     pub(crate) fn remove_entry(&self, fd: types::Fd) -> Result<Rc<Entry>> {
         self.entries.borrow_mut().remove(fd).ok_or(Errno::Badf)
-    }
-
-    /// Resolve the address of the specified `host` and `port` using the configured
-    /// address pool table.
-    pub(crate) fn addr_resolve(&self, host: &str, port: u16) -> Result<Vec<types::Addr>> {
-        self.address_pools.borrow().resolve(host, port)
-    }
-
-    /// Retrieve the `AddressPool` that contains this `SocketAddr`
-    pub(crate) fn get_addr_pool(&self, addr: &types::Addr) -> Result<Rc<Box<dyn AddressPool>>> {
-        match self.address_pools.borrow().get_pool(addr) {
-            Some(pool) => Ok(pool),
-            None => Err(Errno::Badf)
-        }
     }
 }
