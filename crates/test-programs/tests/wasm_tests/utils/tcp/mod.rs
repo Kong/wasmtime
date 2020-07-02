@@ -65,7 +65,6 @@ impl EchoTcpServer {
 
 impl Drop for EchoTcpServer {
     fn drop(&mut self) {
-        println!("stopping echo tcp server");
         self.stop_flag.swap(true, Ordering::Relaxed);
         self.thread.take().unwrap().join().expect("cannot join thread");
     }
@@ -138,9 +137,7 @@ impl EchoTcpClient {
 
 impl Drop for EchoTcpClient {
     fn drop(&mut self) {
-        println!("stopping echo tcp client");
         self.stop_flag.swap(true, Ordering::Relaxed);
         self.thread.take().unwrap().join().expect("cannot join thread");
-        println!("done");
     }
 }

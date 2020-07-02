@@ -42,7 +42,6 @@ unsafe fn test_socket_tcp_server(port: u16) {
     let childfd = wasi::sock_accept(fd)
         .expect("unable to accept connection");
     let remote_addr = sock_addr_remote(childfd);
-    println!("client connected {}", wasi_tests::PrintableAddr(remote_addr));
 
     let mut send_content = String::from("Hello World");
     let sent = wasi::sock_send(childfd, send_content.as_mut_ptr(), send_content.len(), 0)

@@ -24,10 +24,8 @@ impl EchoUdpSocket {
             while !shared_stop.load(Ordering::Relaxed) {
                 match socket.recv_from(&mut buf) {
                     Ok((size, send_to)) => {
-                        println!("recevied {} bytes", size);
                         // reply back
                         socket.send_to(&buf[0..size], send_to).unwrap();
-                        println!("sent {} bytes", size);
                     },
                     Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {},
                     Err(e) => panic!("encountered IO error: {}", e)

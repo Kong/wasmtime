@@ -288,14 +288,14 @@ mod wasi_tests {
                 "clock_time_get" => true,
                 "sched_yield" => true,
                 "addr_resolve" => true,
-                "socket_tcp_client" => true,
-                "socket_tcp_server" => true,
+                "sock_tcp_client" => true,
+                "sock_tcp_server" => true,
                 "sock_bind" => true,
-                "sock_set_reuse_addr" => true,
-                "sock_set_reuse_port" => true,
-                "sock_set_recv_buf_size" => true,
-                "sock_set_send_buf_size" => true,
-                "socket_udp" => true,
+                "sock_reuse_addr" => true,
+                "sock_reuse_port" => true,
+                "sock_recv_buf_size" => true,
+                "sock_send_buf_size" => true,
+                "sock_udp" => true,
                 "sock_close" => true,
                 _ => false,
             }
@@ -308,7 +308,7 @@ mod wasi_tests {
     fn requires_tcp_server(testsuite: &str, name: &str) -> bool {
         if testsuite == "wasi-tests" {
             match name {
-                "socket_tcp_client" => true,
+                "sock_tcp_client" => true,
                 _ => false,
             }
         } else {
@@ -321,7 +321,7 @@ mod wasi_tests {
         if testsuite == "wasi-tests" {
             match name {
                 //"socket_tcp_client" => true,
-                "socket_tcp_server" => true,
+                "sock_tcp_server" => true,
                 _ => false,
             }
         } else {
@@ -334,7 +334,7 @@ mod wasi_tests {
         if testsuite == "wasi-tests" {
             match name {
                 //"socket_tcp_client" => true,
-                "socket_udp" => true,
+                "sock_udp" => true,
                 _ => false,
             }
         } else {
