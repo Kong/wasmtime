@@ -81,10 +81,42 @@ unsafe fn test_sock_bind_not_capable() {
         .expect("cannot close socket");
 }
 
+unsafe fn test_sock_bind_mismatch_af() {
+    let mut addr = wasi::Addr {
+        tag: wasi::ADDR_TYPE_IP4,
+        u: wasi::AddrU {
+            ip4: wasi::AddrIp4Port {
+                addr: wasi::AddrIp4 {
+                    n0: 127,
+                    n1: 0,
+                    h0: 0,
+                    h1: 1,
+                },
+                port: 9090,
+            }
+        },
+    };
+
+    let fd = wasi::sock_open(STDPOOL_FD, wasi::ADDRESS_FAMILY_INET6, wasi::SOCK_TYPE_SOCKET_STREAM)
+        .expect("cannot open socket");
+
+    assert_eq!(
+        wasi::sock_bind(fd, &mut addr as *mut wasi::Addr)
+            .expect_err("cannot bind socket")
+            .raw_error(),
+        wasi::ERRNO_AFNOSUPPORT,
+        "errno should be ERRNO_AFNOSUPPORT",
+    );
+
+    wasi::sock_close(fd)
+        .expect("cannot close socket");
+}
+
 fn main() {
     // Run the tests.
     unsafe {
         test_sock_bind();
         test_sock_bind_not_capable();
+        test_sock_bind_mismatch_af();
     }
 }

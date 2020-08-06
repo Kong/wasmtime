@@ -1,6 +1,7 @@
 use std::cell::Cell;
 use crate::handle::{HandleRights, Handle};
 use crate::wasi::types;
+use crate::addr::AddressFamilyCompatible;
 use super::sys_impl::ossocket::RawOsSocket;
 use std::any::Any;
 use std::io;
@@ -18,6 +19,7 @@ impl From<types::SockType> for types::Filetype {
 pub(crate) struct OsSocket {
     socket_type: types::SockType,
     rights: Cell<HandleRights>,
+    address_family: types::AddressFamily,
     handle: RawOsSocket,
     addr_pool: Option<Box<dyn Handle>>
 }
@@ -29,6 +31,7 @@ impl OsSocket {
         Ok(Self {
             socket_type,
             rights,
+            address_family,
             handle: raw_socket,
             addr_pool: Some(addr_pool)
         })
@@ -44,10 +47,12 @@ impl Handle for OsSocket {
         let socket_type = self.socket_type;
         let handle = self.handle.try_clone()?;
         let rights = self.rights.clone();
+        let address_family = self.address_family;
         let addr_pool = if self.addr_pool.is_some() { Some(self.addr_pool.as_ref().unwrap().try_clone()?) } else { None };
         Ok(Box::new(Self {
             socket_type,
             rights,
+            address_family,
             handle,
             addr_pool
         }))
@@ -68,7 +73,9 @@ impl Handle for OsSocket {
     }
 
     fn sock_connect(&self, addr: &types::Addr) -> wasi::Result<()> {
-        if !(self.addr_pool.is_some() && self.addr_pool.as_ref().unwrap().addr_pool_contains(addr)?) {
+        if !self.address_family.accepts(&addr) {
+            Err(types::Errno::Afnosupport)
+        } else if !(self.addr_pool.is_some() && self.addr_pool.as_ref().unwrap().addr_pool_contains(addr)?) {
             Err(types::Errno::Notcapable)
         } else {
             self.handle.connect(addr)?;
@@ -77,7 +84,9 @@ impl Handle for OsSocket {
     }
 
     fn sock_bind(&self, addr: &types::Addr) -> wasi::Result<()> {
-        if !(self.addr_pool.is_some() && self.addr_pool.as_ref().unwrap().addr_pool_contains(addr)?) {
+        if !self.address_family.accepts(&addr) {
+            Err(types::Errno::Afnosupport)
+        } else if !(self.addr_pool.is_some() && self.addr_pool.as_ref().unwrap().addr_pool_contains(addr)?) {
             Err(types::Errno::Notcapable)
         } else {
             self.handle.bind(addr)?;
@@ -96,6 +105,7 @@ impl Handle for OsSocket {
         let socket = OsSocket {
             socket_type: self.socket_type,
             rights,
+            address_family: self.address_family,
             handle: raw_socket,
             addr_pool: None
         };

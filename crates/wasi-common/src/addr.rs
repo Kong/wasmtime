@@ -80,6 +80,29 @@ impl From<&types::Addr> for SocketAddr {
     }
 }
 
+pub trait AddressFamilyCompatible {
+    fn accepts(&self, addr: &types::Addr) -> bool;
+}
+
+impl AddressFamilyCompatible for types::AddressFamily {
+    fn accepts(&self, addr: &types::Addr) -> bool {
+        match self {
+            types::AddressFamily::Inet4 => {
+                match addr {
+                    types::Addr::Ip6(_) => false,
+                    _ => true
+                }
+            },
+            types::AddressFamily::Inet6 => {
+                match addr {
+                    types::Addr::Ip4(_) => false,
+                    _ => true
+                }
+            }
+        }
+    }
+}
+
 pub(crate) struct FixedAddressPool {
     rights: Cell<HandleRights>,
     addrs: Vec<SocketAddr>,
