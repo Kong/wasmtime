@@ -285,7 +285,6 @@ mod wasi_tests {
     cfg_if::cfg_if! {
         if #[cfg(feature = "socket_api")] {
             fn ignore_socket_api(testsuite: &str, _name: &str) -> bool {
-                println!("DO NOT IGNORE");
                 if testsuite == "wasi-tests" {
                     false
                 } else {
@@ -294,7 +293,6 @@ mod wasi_tests {
             }
         } else {
             fn ignore_socket_api(testsuite: &str, name: &str) -> bool {
-                println!("IGNORING");
                 if testsuite == "wasi-tests" {
                     match name {
                         "addr_resolve" => true,
