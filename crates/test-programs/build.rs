@@ -156,6 +156,9 @@ mod wasi_tests {
         if ignore(testsuite, &test_fn_name) {
             writeln!(out, "    #[ignore]")?;
         }
+        if ignore_socket_api(testsuite, &test_fn_name) {
+            writeln!(out, "    #[ignore]")?;
+        }
         writeln!(out, "    fn r#{}() -> anyhow::Result<()> {{", test_fn_name,)?;
         writeln!(out, "        setup_log();")?;
         writeln!(
@@ -270,6 +273,43 @@ mod wasi_tests {
                         "path_rename_virtualfs" => true,
                         // TODO: virtfs does not support truncation yet.
                         "file_truncation_virtualfs" => true,
+                        _ => false,
+                    }
+                } else {
+                    unreachable!()
+                }
+            }
+        }
+    }
+
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "socket_api")] {
+            fn ignore_socket_api(testsuite: &str, _name: &str) -> bool {
+                println!("DO NOT IGNORE");
+                if testsuite == "wasi-tests" {
+                    false
+                } else {
+                    unreachable!()
+                }
+            }
+        } else {
+            fn ignore_socket_api(testsuite: &str, name: &str) -> bool {
+                println!("IGNORING");
+                if testsuite == "wasi-tests" {
+                    match name {
+                        "addr_resolve" => true,
+                        "sock_tcp_client" => true,
+                        "sock_tcp_server" => true,
+                        "sock_bind" => true,
+                        "sock_reuse_addr" => true,
+                        "sock_reuse_port" => true,
+                        "sock_recv_buf_size" => true,
+                        "sock_send_buf_size" => true,
+                        "sock_udp" => true,
+                        "sock_close" => true,
+                        "sock_connect" => true,
+                        "sock_send_to" => true,
+                        "sock_open" => true,
                         _ => false,
                     }
                 } else {

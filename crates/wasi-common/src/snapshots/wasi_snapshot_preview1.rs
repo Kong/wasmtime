@@ -1,6 +1,7 @@
 use crate::entry::{Entry, EntryHandle};
 use crate::handle::HandleRights;
 use crate::sys::clock;
+#[cfg(feature = "socket_api")]
 use crate::sys::ossocket::OsSocket;
 use crate::wasi::wasi_snapshot_preview1::WasiSnapshotPreview1;
 use crate::wasi::{types, AsBytes, Errno, Result};
@@ -9,7 +10,9 @@ use crate::{path, poll};
 use log::{debug, error, trace};
 use std::convert::TryInto;
 use std::io::{self, SeekFrom};
-use wiggle::{GuestPtr, GuestType, GuestSlice};
+#[cfg(feature = "socket_api")]
+use wiggle::GuestType;
+use wiggle::{GuestPtr, GuestSlice};
 
 impl<'a> WasiSnapshotPreview1 for WasiCtx {
     fn args_get<'b>(
@@ -815,6 +818,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         })
     }
 
+    #[cfg(feature = "socket_api")]
     fn addr_resolve(
         &self,
         addr_pool_fd: types::Fd,
@@ -846,6 +850,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         }
     }
 
+    #[cfg(feature = "socket_api")]
     fn sock_addr_local(
         &self,
         fd: types::Fd,
@@ -869,6 +874,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         }
     }
 
+    #[cfg(feature = "socket_api")]
     fn sock_addr_remote(
         &self,
         fd: types::Fd,
@@ -892,6 +898,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         }
     }
 
+    #[cfg(feature = "socket_api")]
     fn sock_open(
         &self,
         address_pool: types::Fd,
@@ -913,10 +920,12 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         }
     }
 
+    #[cfg(feature = "socket_api")]
     fn sock_close(&self, fd: types::Fd) -> Result<()> {
         self.fd_close(fd)
     }
 
+    #[cfg(feature = "socket_api")]
     fn sock_set_reuse_addr(
         &self,
         fd: types::Fd,
@@ -939,6 +948,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         Ok(reuse as u8)
     }
 
+    #[cfg(feature = "socket_api")]
     fn sock_set_reuse_port(
         &self,
         fd: types::Fd,
@@ -950,6 +960,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         handle.sock_set_reuse_port(reuse != 0)
     }
 
+    #[cfg(feature = "socket_api")]
     fn sock_get_reuse_port(
         &self,
         fd: types::Fd,
@@ -961,6 +972,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         Ok(reuse as u8)
     }
 
+    #[cfg(feature = "socket_api")]
     fn sock_set_recv_buf_size(
         &self,
         fd: types::Fd,
@@ -972,6 +984,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         handle.sock_set_recv_buf_size(size)
     }
 
+    #[cfg(feature = "socket_api")]
     fn sock_get_recv_buf_size(
         &self,
         fd: types::Fd,
@@ -983,6 +996,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         Ok(size)
     }
 
+    #[cfg(feature = "socket_api")]
     fn sock_set_send_buf_size(
         &self,
         fd: types::Fd,
@@ -994,6 +1008,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         handle.sock_set_send_buf_size(size)
     }
 
+    #[cfg(feature = "socket_api")]
     fn sock_get_send_buf_size(
         &self,
         fd: types::Fd,
@@ -1005,6 +1020,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         Ok(size)
     }
 
+    #[cfg(feature = "socket_api")]
     fn sock_connect(
         &self,
         fd: types::Fd,
@@ -1017,6 +1033,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         handle.sock_connect(&addr)
     }
 
+    #[cfg(feature = "socket_api")]
     fn sock_bind(
         &self,
         fd: types::Fd,
@@ -1029,6 +1046,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         handle.sock_bind(&addr)
     }
 
+    #[cfg(feature = "socket_api")]
     fn sock_listen(
         &self,
         fd: types::Fd,
@@ -1040,6 +1058,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         handle.sock_listen(backlog)
     }
 
+    #[cfg(feature = "socket_api")]
     fn sock_accept(
         &self,
         fd: types::Fd
@@ -1053,6 +1072,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         Ok(child_fd)
     }
 
+    #[cfg(feature = "socket_api")]
     fn sock_recv(
         &self,
         fd: types::Fd,
@@ -1068,6 +1088,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         Ok(bufused)
     }
 
+    #[cfg(feature = "socket_api")]
     fn sock_recv_from(
         &self,
         fd: types::Fd,
@@ -1093,6 +1114,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         }
     }
 
+    #[cfg(feature = "socket_api")]
     fn sock_send(
         &self,
         fd: types::Fd,
@@ -1108,6 +1130,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         Ok(bufused)
     }
 
+    #[cfg(feature = "socket_api")]
     fn sock_send_to(
         &self,
         fd: types::Fd,
@@ -1125,6 +1148,7 @@ impl<'a> WasiSnapshotPreview1 for WasiCtx {
         Ok(bufused)
     }
 
+    #[cfg(feature = "socket_api")]
     fn sock_shutdown(&self, fd: types::Fd, how: types::Sdflags) -> Result<()> {
         let entry = self.get_entry(fd)?;
         let rights = HandleRights::empty();

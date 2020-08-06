@@ -22,3 +22,4 @@ wat = "1.0.18"
 
 [features]
 test_programs = []
+socket_api = ["wasi-common/socket_api"]
