@@ -21,6 +21,9 @@ winapi = { version = "^0.3", features = [
     "winbase",
     "winerror",
     "ws2def",
+    "ws2ipdef",
+    "ws2tcpip",
+    "minwindef",
     "fileapi",
     "aclapi",
 ] }

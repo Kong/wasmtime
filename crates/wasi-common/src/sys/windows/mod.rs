@@ -4,6 +4,7 @@ pub(crate) mod osdir;
 pub(crate) mod osfile;
 pub(crate) mod oshandle;
 pub(crate) mod osother;
+pub(crate) mod ossocket;
 pub(crate) mod path;
 pub(crate) mod poll;
 pub(crate) mod stdio;
@@ -19,6 +20,7 @@ use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{io, string};
 use winapi::shared::winerror;
+use winapi::um::winsock2 as winsock;
 use winx::file::{CreationDisposition, Flags};
 
 impl<T: AsRawHandle> AsFile for T {
@@ -77,6 +79,10 @@ pub(super) fn get_rights(file_type: &types::Filetype) -> io::Result<HandleRights
             types::Rights::regular_file_base(),
             types::Rights::regular_file_inheriting(),
         ),
+        types::Filetype::AddressPool => (
+            types::Rights::address_pool_base(),
+            types::Rights::address_pool_inheriting(),
+        ),
     };
     let rights = HandleRights::new(base, inheriting);
     Ok(rights)
@@ -106,19 +112,36 @@ pub(crate) fn file_serial_no(file: &File) -> io::Result<u64> {
     Ok(no)
 }
 
+const WSAEBADF: u32 = winsock::WSAEBADF as u32;
+const WSAEACCES: u32 = winsock::WSAEACCES as u32;
+const WSAEFAULT: u32 = winsock::WSAEFAULT as u32;
+const WSAEINVAL: u32 = winsock::WSAEINVAL as u32;
+const WSAENOTSOCK: u32 = winsock::WSAENOTSOCK as u32;
+const WSAEPFNOSUPPORT: u32 = winsock::WSAEPFNOSUPPORT as u32;
+const WSAEAFNOSUPPORT: u32 = winsock::WSAEAFNOSUPPORT as u32;
+const WSAEADDRINUSE: u32 = winsock::WSAEADDRINUSE as u32;
+const WSAEADDRNOTAVAIL: u32 = winsock::WSAEADDRNOTAVAIL as u32;
+const WSAECONNABORTED: u32 = winsock::WSAECONNABORTED as u32;
+const WSAECONNRESET: u32 = winsock::WSAECONNRESET as u32;
+const WSAEISCONN: u32 = winsock::WSAEISCONN as u32;
+const WSAETIMEDOUT: u32 = winsock::WSAETIMEDOUT as u32;
+const WSAECONNREFUSED: u32 = winsock::WSAECONNREFUSED as u32;
+const WSAEHOSTUNREACH: u32 = winsock::WSAEHOSTUNREACH as u32;
+
 impl From<io::Error> for Errno {
     fn from(err: io::Error) -> Self {
         match err.raw_os_error() {
             Some(code) => match code as u32 {
+
                 winerror::ERROR_SUCCESS => Self::Success,
                 winerror::ERROR_BAD_ENVIRONMENT => Self::TooBig,
                 winerror::ERROR_FILE_NOT_FOUND => Self::Noent,
                 winerror::ERROR_PATH_NOT_FOUND => Self::Noent,
                 winerror::ERROR_TOO_MANY_OPEN_FILES => Self::Nfile,
-                winerror::ERROR_ACCESS_DENIED => Self::Acces,
+                winerror::ERROR_ACCESS_DENIED | WSAEACCES => Self::Acces,
                 winerror::ERROR_SHARING_VIOLATION => Self::Acces,
                 winerror::ERROR_PRIVILEGE_NOT_HELD => Self::Notcapable,
-                winerror::ERROR_INVALID_HANDLE => Self::Badf,
+                winerror::ERROR_INVALID_HANDLE | WSAEBADF => Self::Badf,
                 winerror::ERROR_INVALID_NAME => Self::Noent,
                 winerror::ERROR_NOT_ENOUGH_MEMORY => Self::Nomem,
                 winerror::ERROR_OUTOFMEMORY => Self::Nomem,
@@ -129,10 +152,21 @@ impl From<io::Error> for Errno {
                 winerror::ERROR_FILE_EXISTS => Self::Exist,
                 winerror::ERROR_BROKEN_PIPE => Self::Pipe,
                 winerror::ERROR_BUFFER_OVERFLOW => Self::Nametoolong,
-                winerror::ERROR_NOT_A_REPARSE_POINT => Self::Inval,
+                winerror::ERROR_NOT_A_REPARSE_POINT | WSAEINVAL => Self::Inval,
                 winerror::ERROR_NEGATIVE_SEEK => Self::Inval,
                 winerror::ERROR_DIRECTORY => Self::Notdir,
                 winerror::ERROR_ALREADY_EXISTS => Self::Exist,
+                WSAEFAULT => Self::Fault,
+                WSAENOTSOCK => Self::Notsock,
+                WSAEPFNOSUPPORT | WSAEAFNOSUPPORT => Self::Afnosupport,
+                WSAEADDRINUSE => Self::Addrinuse,
+                WSAEADDRNOTAVAIL => Self::Addrnotavail,
+                WSAECONNABORTED => Self::Connaborted,
+                WSAECONNRESET => Self::Connreset,
+                WSAEISCONN => Self::Already,
+                WSAETIMEDOUT => Self::Timedout,
+                WSAECONNREFUSED => Self::Connrefused,
+                WSAEHOSTUNREACH => Self::Hostunreach,
                 x => {
                     log::debug!("winerror: unknown error value: {}", x);
                     Self::Io

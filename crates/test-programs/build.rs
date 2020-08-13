@@ -273,6 +273,8 @@ mod wasi_tests {
                         "path_rename_virtualfs" => true,
                         // TODO: virtfs does not support truncation yet.
                         "file_truncation_virtualfs" => true,
+                        // TODO: no reuse port support on Windows
+                        "sock_reuse_port" => true,
                         _ => false,
                     }
                 } else {

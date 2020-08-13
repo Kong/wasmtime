@@ -50,7 +50,7 @@ trait IsZero {
     fn is_zero(&self) -> bool;
 }
 
-macro_rules! impl_is_zero {
+macro_rules! impl_is_zero {;
     ($($t:ident)*) => ($(impl IsZero for $t {
         fn is_zero(&self) -> bool {
             *self == 0
